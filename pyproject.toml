@@ -1,0 +1,18 @@
+[tool.ruff]
+lint.extend-select = [
+    "I",
+    "S",
+    "B",
+    "BLE",
+    "C4",
+    "ISC",
+    "ICN",
+    "INP",
+    "Q",
+    "RSE",
+    "SIM",
+    "TID",
+    "PIE",
+    "RUF",
+    "TCH"]
+show-fixes = true
