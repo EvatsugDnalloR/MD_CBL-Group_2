@@ -1,12 +1,13 @@
-import pandas as pd
-import os
-import geopandas as gpd
 import glob
+import os
+
+import geopandas as gpd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 # Load all crime data
-crime_files = glob.glob('data/crimes/**/*-street.csv', recursive=True)
+crime_files = glob.glob("data/crimes/**/*-street.csv", recursive=True)
 df_list = []
 
 for file in crime_files:
@@ -16,45 +17,45 @@ for file in crime_files:
 raw_df = pd.concat(df_list, ignore_index=True)
 
 # Filter for Burglary crimes
-burglary_df = raw_df[raw_df['Crime type'] == 'Burglary'].copy()
+burglary_df = raw_df[raw_df["Crime type"] == "Burglary"].copy()
 
 # Handle missing locations
 print(f"Initial burglary records: {len(burglary_df)}")
 print(f"Records without location: {burglary_df['Location'].isnull().sum()}")
 
 # Remove entries with no location data
-burglary_clean = burglary_df.dropna(subset=['Longitude', 'Latitude'])
-burglary_clean = burglary_clean[burglary_clean['Location'] != 'No Location']
+burglary_clean = burglary_df.dropna(subset=["Longitude", "Latitude"])
+burglary_clean = burglary_clean[burglary_clean["Location"] != "No Location"]
 
 print(f"Cleaned burglary records: {len(burglary_clean)}")
 
 # Convert Month to datetime
-burglary_clean['Month'] = pd.to_datetime(burglary_clean['Month'], format='%Y-%m')
+burglary_clean["Month"] = pd.to_datetime(burglary_clean["Month"], format="%Y-%m")
 
 # Monthly trend analysis
-monthly_trend = burglary_clean.resample('ME', on='Month').size()
+monthly_trend = burglary_clean.resample("ME", on="Month").size()
 
 plt.figure(figsize=(12, 6))
-monthly_trend.plot(title='Monthly Burglary Trends')
-plt.ylabel('Number of Burglaries')
-plt.xlabel('Date')
+monthly_trend.plot(title="Monthly Burglary Trends")
+plt.ylabel("Number of Burglaries")
+plt.xlabel("Date")
 plt.show()
 
 # Outcome analysis
-outcome_dist = burglary_clean['Last outcome category'].value_counts(normalize=True)
+outcome_dist = burglary_clean["Last outcome category"].value_counts(normalize=True)
 
 plt.figure(figsize=(15, 6))
 sns.barplot(x=outcome_dist.values, y=outcome_dist.index)
-plt.title('Distribution of Investigation Outcomes')
-plt.xlabel('Percentage of Cases')
+plt.title("Distribution of Investigation Outcomes")
+plt.xlabel("Percentage of Cases")
 plt.show()
 
 # Generate basic statistics
 report = {
     "time_period": f"{burglary_clean['Month'].min().date()} to {burglary_clean['Month'].max().date()}",
     "total_burglaries": len(burglary_clean),
-    "monthly_average": round(len(burglary_clean)/burglary_clean['Month'].nunique(), 1),
-    "most_common_lsoa": burglary_clean['LSOA name'].mode()[0],
+    "monthly_average": round(len(burglary_clean)/burglary_clean["Month"].nunique(), 1),
+    "most_common_lsoa": burglary_clean["LSOA name"].mode()[0],
     "missing_data_percentage": f"{round((len(raw_df)-len(burglary_clean))/len(raw_df)*100, 1)}%",
     "clearance_rate": f"{round(outcome_dist.get('Investigation complete; no suspect identified', 0)*100, 1)}%"
 }
@@ -65,11 +66,11 @@ for k, v in report.items():
 
 
 # Set GDAL path (modify to your Anaconda path)
-os.environ['GDAL_DATA'] = r'D:\anaconda3\Library\share\gdal'
+os.environ["GDAL_DATA"] = r"D:\anaconda3\Library\share\gdal"
 
 # Load all LSOA shapefiles
 lsoa_path = "./data/lsoa/"
-lsoa_files = [f for f in os.listdir(lsoa_path) if f.endswith('.shp')]
+lsoa_files = [f for f in os.listdir(lsoa_path) if f.endswith(".shp")]
 
 lsoa_gdf = gpd.GeoDataFrame()
 for file in lsoa_files:
@@ -82,8 +83,8 @@ print(f"\n{lsoa_gdf.crs}")  # Should be EPSG:27700 (UK Ordnance Survey) or simil
 print("Columns in LSOA shapefiles:", lsoa_gdf.columns.tolist())
 
 # Aggregate burglaries per LSOA
-lsoa_counts = burglary_clean['LSOA code'].value_counts().reset_index()
-lsoa_counts.columns = ['lsoa21cd', 'Burglary Count']
+lsoa_counts = burglary_clean["LSOA code"].value_counts().reset_index()
+lsoa_counts.columns = ["lsoa21cd", "Burglary Count"]
 
 # Merge with LSOA geometries
 lsoa_merged = lsoa_gdf.merge(lsoa_counts, on="lsoa21cd", how="left")
@@ -117,6 +118,6 @@ gdf = gdf.to_crs(lsoa_merged.crs)
 
 # Now plot
 gdf.plot(ax=ax, markersize=2, color="blue", alpha=0.3)
-plt.title('Burglary Distribution Across London LSOAs')
-plt.axis('off')
+plt.title("Burglary Distribution Across London LSOAs")
+plt.axis("off")
 plt.show()
