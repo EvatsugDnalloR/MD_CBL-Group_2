@@ -71,7 +71,7 @@ class Dataset():
         df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
         df_count = df_count.pivot(index='Month', columns='Year', values='count')
         df_count = df_count.sort_index()
-        fig = px.line(df_count, markers=True, title="Number of Crimes per Month",
+        fig = px.line(df_count, markers=True, title="Number of Burglaries per Month",
                       labels={"Month": "Month", "value": "Count"}, line_shape='linear')
         fig.update_layout(xaxis=dict(tickmode='array', tickvals=list(range(1, 13))), xaxis_title="Month",
                           yaxis_title="Count", legend_title="Year")
