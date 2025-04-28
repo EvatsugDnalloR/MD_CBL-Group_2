@@ -1,8 +1,5 @@
-"""
-EDA on Feb. 2025 data.
-"""
 import pandas as pd
+from concat_eda_all_data import Dataset
+from config import path
 
-df_street = pd.read_csv("data/2025-02/2025-02-metropolitan-street.csv")
-df_burglary = df_street[df_street['Crime type'] == 'Burglary']
-print(df_burglary)
+df = Dataset(path).eda()  # get cleaned dataset and perform EDA
