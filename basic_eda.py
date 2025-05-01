@@ -10,7 +10,7 @@ import seaborn as sns
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 # Load all crime data
-crime_files = glob.glob("data/crimes/**/*-street.csv", recursive=True)
+crime_files = glob.glob("data/crimes_city_and_metropolitan/**/*-street.csv", recursive=True)
 df_list = []
 
 for file in crime_files:
@@ -19,7 +19,7 @@ for file in crime_files:
 
 raw_df = pd.concat(df_list, ignore_index=True)
 
-# Filter for Burglary crimes
+# Filter for Burglary crimes_city_and_metropolitan
 burglary_df = raw_df[raw_df["Crime type"] == "Burglary"].copy()
 
 # Handle missing locations
