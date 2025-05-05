@@ -1,4 +1,5 @@
 import pandas as pd
+pd.set_option('display.max_columns', None)
 import plotly.express as px
 from config import eda
 
@@ -54,10 +55,10 @@ class Dataset:
         """
         df = self.make_dataset()
         print(f"The dataset has {len(df)} rows and {len(df.columns)} columns.\n"
-              f"There are {sum(df['Longitude'].isnull())} rows with no crime locations.\n" if self.eda else "")
+              f"There are {sum(df['Longitude'].isnull())} rows with no crime locations." if self.eda else "")
 
         df = df.dropna(subset=['Longitude', 'Latitude'])  # remove rows with empty locations
-        df = df.drop(['Context', 'Crime type', 'Unnamed: 0'], axis=1)  # remove empty and unnecessary columns
+        df = df.drop(['Context', 'Crime type'], axis=1)  # remove empty and unnecessary columns
         df['Year'] = df['Month'].str.extract(r'(\d{4})-\d{2}').astype(int)  # separate month and year
         df['Month'] = df['Month'].str.extract(r'\d{4}-(\d{2})').astype(int)
 
@@ -68,13 +69,21 @@ class Dataset:
         df_ward = pd.read_csv('lsoa_ward_data/LSOA_2021_to_Electoral_Ward_2024.csv')
         ward_codes = dict(zip(df_ward['LSOA21CD'], df_ward['WD24CD']))
         ward_names = dict(zip(df_ward['LSOA21NM'], df_ward['WD24NM']))
+        lad_codes = dict(zip(df_ward['WD24CD'], df_ward['LAD24CD']))
 
         df['LSOA code'] = df['LSOA code'].map(lsoa_codes).fillna(df['LSOA code'])
         df['LSOA name'] = df['LSOA name'].map(lsoa_names).fillna(df['LSOA name'])
         df['Ward code'] = df['LSOA code'].map(ward_codes)
         df['Ward name'] = df['LSOA name'].map(ward_names)
+        df['LAD code'] = df['Ward code'].map(lad_codes)  # check if all burglaries took place in London
 
-        df.to_csv(f"{self.path}/all_dates_burglary.csv")  # save cleaned dataset
+        outside_london_mask = df['LAD code'].str.startswith('E09')  # all burglaries outside London
+        print(f"There are {len(outside_london_mask)} burglaries that took place outside of London.\n"
+              if self.eda else "")
+
+        df = df[outside_london_mask]
+        df = df.drop(['LAD code', 'Unnamed: 0'], axis=1)
+        df.to_csv(f"{self.path}/burglary.csv")  # save cleaned dataset
 
         return df
 
@@ -87,11 +96,10 @@ class Dataset:
         print(f"Investigation outcomes:\n{df['Last outcome category'].value_counts()}\n\n"
               f"Burglaries per LSOA code:\n{df['LSOA name'].value_counts()}" if self.eda else "")
 
-        df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
-        df_count = df_count.pivot(index='Month', columns='Year', values='count')
-        df_count = df_count.sort_index()
-
         if self.eda:
+            df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
+            df_count = df_count.pivot(index='Month', columns='Year', values='count')
+            df_count = df_count.sort_index()
             fig = px.line(df_count, markers=True, title="Number of Burglaries per Month",
                           labels={"Month": "Month", "value": "Count"}, line_shape='linear')
             fig.update_layout(xaxis=dict(tickmode='array', tickvals=list(range(1, 13))), xaxis_title="Month",
