@@ -77,11 +77,12 @@ class Dataset:
         df['Ward name'] = df['LSOA name'].map(ward_names)
         df['LAD code'] = df['Ward code'].map(lad_codes)  # check if all burglaries took place in London
 
-        outside_london_mask = df['LAD code'].str.startswith('E09')  # all burglaries outside London
-        print(f"There are {len(outside_london_mask)} burglaries that took place outside of London.\n"
+        in_london_mask = df['LAD code'].str.startswith('E09')  # all burglaries in London
+        df_outside = df[~in_london_mask]
+        print(f"There are {len(df_outside)} burglaries that took place outside of London.\n"
               if self.eda else "")
 
-        df = df[outside_london_mask]
+        df = df[in_london_mask]
         df = df.drop(['LAD code', 'Unnamed: 0'], axis=1)
         df.to_csv(f"{self.path}/burglary.csv")  # save cleaned dataset
 
