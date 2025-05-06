@@ -1,14 +1,14 @@
 import pandas as pd
 pd.set_option('display.max_columns', None)
 import plotly.express as px
-from config import eda
+from config import path, eda
 
 
 class Dataset:
     """
     Make one dataset containing burglary data from all dates.
     """
-    def __init__(self, path: str, eda: bool = eda) -> None:
+    def __init__(self, path: str = path, eda: bool = eda) -> None:
         """
         Initialize the Dataset object.
         :param path: path to directory to store dataframe, make sure it exists!
@@ -79,12 +79,16 @@ class Dataset:
 
         in_london_mask = df['LAD code'].str.startswith('E09')  # all burglaries in London
         df_outside = df[~in_london_mask]
-        print(f"There are {len(df_outside)} burglaries that took place outside of London.\n"
-              if self.eda else "")
-
+        print(f"There are {len(df_outside)} burglaries that took place outside of London." if self.eda else "")
         df = df[in_london_mask]
+
+        city_of_london_mask = df['LSOA name'].str.contains('City of London')
+        df_col = df[city_of_london_mask]
+        print(f"There are {len(df_col)} burglaries that took place in the City of London.\n" if self.eda else "")
+        df = df[~city_of_london_mask]
+
         df = df.drop(['LAD code', 'Unnamed: 0'], axis=1)
-        df.to_csv(f"{self.path}/burglary.csv")  # save cleaned dataset
+        df.to_csv(f"{self.path}/burglary.csv", index=False)  # save cleaned dataset
 
         return df
 
