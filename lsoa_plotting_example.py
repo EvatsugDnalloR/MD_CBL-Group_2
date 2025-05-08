@@ -4,7 +4,6 @@ import contextily as ctx
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 # Load all burglary crime data
@@ -79,7 +78,7 @@ lsoa_merged.plot(
     edgecolor="white",
     legend=True,
     scheme="quantiles",  # Better for skewed distributions
-    legend_kwds={'loc': 'lower right'},
+    legend_kwds={"loc": "lower right"},
     alpha=0.8,  # Add transparency
     ax=ax
 )
