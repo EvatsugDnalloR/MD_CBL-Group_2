@@ -112,3 +112,15 @@ class Dataset:
             fig.show()
 
         return df
+
+    def get_residential_burglaries(self, df: pd.DataFrame) -> pd.DataFrame:
+        not_residential_list = ["Supermarket", "Parking Area", "Sports/Recreation Area", "Shopping Area",
+                                "Petrol Station", "Further/Higher Educational Building", "Nightclub",
+                                "Pedestrian Subway", "Theatre/Concert Hall", "Hospital", "Conference/Exhibition Centre",
+                                "Police Station", "Park/Open Space", "Bus/Coach Station"]  # non-residential locations
+        not_residential_pattern = "|".join(not_residential_list)
+        not_residential_mask = df['Location'].str.contains(not_residential_pattern)
+        df_not = df[~not_residential_mask]  # remove all non-residential locations
+        df_not.to_csv(f"{self.path}/burglary.csv", index=False)
+
+        return df_not
