@@ -114,6 +114,11 @@ class Dataset:
         return df
 
     def get_residential_burglaries(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove all non-residential burglaries.
+        :param df: cleaned dataset with all burglaries.
+        :return: dataset with non-residential burglaries.
+        """
         not_residential_list = ["Supermarket", "Parking Area", "Sports/Recreation Area", "Shopping Area",
                                 "Petrol Station", "Further/Higher Educational Building", "Nightclub",
                                 "Pedestrian Subway", "Theatre/Concert Hall", "Hospital", "Conference/Exhibition Centre",
