@@ -7,7 +7,7 @@ import pandas as pd
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 # Load all burglary crime data
-burglary_df = pd.read_csv("data/burglary.csv")
+burglary_df = pd.read_csv("data/residential_burglary.csv")
 
 # Handle missing locations
 print(f"Initial burglary records: {len(burglary_df)}")
