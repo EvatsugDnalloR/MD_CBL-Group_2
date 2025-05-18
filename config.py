@@ -1,2 +1,2 @@
-path = "test_file"  # to store the cleaned dataset
+path = "datasets"  # to store the cleaned dataset, make sure this folder exists!
 eda = False
