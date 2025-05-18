@@ -1,7 +1,7 @@
 import pandas as pd
-pd.set_option('display.max_columns', None)
 import plotly.express as px
 from config import path, eda
+pd.set_option('display.max_columns', None)  # show all columns
 
 
 class Dataset:
@@ -37,7 +37,6 @@ class Dataset:
                 m = self.add_zero(m)  # e.g. 5 changes to 05
                 try:
                     df_y_m = pd.read_csv(f"all_data/{str(y)}-{m}-metropolitan-street-burglary.csv")
-                    df_y_m = df_y_m[df_y_m['Crime type'] == 'Burglary']
                     self.df_names.append(df_y_m)
                 except:  # csv with this year and month doesn't exist, move on toward next combo
                     continue
@@ -54,7 +53,7 @@ class Dataset:
         :return: cleaned dataset.
         """
         df = self.make_dataset()
-        print(f"The dataset has {len(df)} rows and {len(df.columns)} columns.\n"
+        print(f"The dataset has {len(df)} rows.\n"
               f"There are {sum(df['Longitude'].isnull())} rows with no crime locations." if self.eda else "")
 
         df = df.dropna(subset=['Longitude', 'Latitude'])  # remove rows with empty locations
@@ -84,32 +83,11 @@ class Dataset:
 
         city_of_london_mask = df['LSOA name'].str.contains('City of London')
         df_col = df[city_of_london_mask]
-        print(f"There are {len(df_col)} burglaries that took place in the City of London.\n" if self.eda else "")
+        print(f"There are {len(df_col)} burglaries that took place in the City of London." if self.eda else "")
         df = df[~city_of_london_mask]
 
         df = df.drop(['LAD code', 'Unnamed: 0'], axis=1)
         df.to_csv(f"{self.path}/burglary.csv", index=False)  # save cleaned dataset
-
-        return df
-
-    def perform_eda(self) -> pd.DataFrame:
-        """
-        Perform EDA on cleaned dataset.
-        :return: cleaned dataset.
-        """
-        df = self.clean_dataset()
-        print(f"Investigation outcomes:\n{df['Last outcome category'].value_counts()}\n\n"
-              f"Burglaries per LSOA code:\n{df['LSOA name'].value_counts()}" if self.eda else "")
-
-        if self.eda:
-            df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
-            df_count = df_count.pivot(index='Month', columns='Year', values='count')
-            df_count = df_count.sort_index()
-            fig = px.line(df_count, markers=True, title="Number of Burglaries per Month",
-                          labels={"Month": "Month", "value": "Count"}, line_shape='linear')
-            fig.update_layout(xaxis=dict(tickmode='array', tickvals=list(range(1, 13))), xaxis_title="Month",
-                              yaxis_title="Count", legend_title="Year")
-            fig.show()
 
         return df
 
@@ -126,6 +104,19 @@ class Dataset:
         not_residential_pattern = "|".join(not_residential_list)
         not_residential_mask = df['Location'].str.contains(not_residential_pattern)
         df_not = df[~not_residential_mask]  # remove all non-residential locations
-        df_not.to_csv(f"{self.path}/burglary.csv", index=False)
+
+        if self.eda:
+            print(f"There are {len(df) - len(df_not)} non-residential burglaries.\n"
+                  f"The cleaned dataset contains {len(df_not)} rows.\n" if self.eda else "")
+            df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
+            df_count = df_count.pivot(index='Month', columns='Year', values='count')
+            df_count = df_count.sort_index()
+            fig = px.line(df_count, markers=True, title="Number of Residential Burglaries per Month",
+                          labels={"Month": "Month", "value": "Count"}, line_shape='linear')
+            fig.update_layout(xaxis=dict(tickmode='array', tickvals=list(range(1, 13))), xaxis_title="Month",
+                              yaxis_title="Count", legend_title="Year")
+            fig.show()
+
+        df_not.to_csv(f"{self.path}/residential_burglary.csv", index=False)
 
         return df_not
