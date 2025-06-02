@@ -1,7 +1,6 @@
 import pandas as pd
 import plotly.express as px
 from config import path, eda
-pd.set_option('display.max_columns', None)  # show all columns
 
 
 class Dataset:
