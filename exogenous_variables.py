@@ -10,7 +10,15 @@ from config import use_api
 
 
 class Population:
+    """
+    Create the population dataframe from all years for all wards.
+    :attributes: file_path
+    """
     def __init__(self, file_path: str):
+        """
+        Initialize the Population object.
+        :param file_path: path to Excel file containing population data
+        """
         self.file_path = file_path
 
     def population_df(self) -> pd.DataFrame:
