@@ -4,8 +4,37 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import time
 import warnings
 import os
+
+
+def oscillation_capture_score(actual, predicted):
+    """Calculate a composite score that detects oscillation pattern matching"""
+    n = len(actual)
+    if n < 3:
+        return 0.0  # Not enough data
+
+    # 1. Detrended Variability Ratio (DVR)
+    var_actual = np.var(actual)
+    var_pred = np.var(predicted)
+
+    # Handle near-zero variance cases
+    if var_actual < 1e-10 and var_pred < 1e-10:
+        dvr = 1.0
+    elif var_actual < 1e-10:
+        dvr = 0.0
+    else:
+        dvr = min(var_pred / var_actual, 2.0)  # Cap at 2.0
+
+    # 2. Smoothness Penalty (SP)
+    pred_diff = np.diff(predicted)
+    sp = 1 - np.exp(-np.mean(np.abs(pred_diff)) / max(1, np.mean(np.abs(np.diff(actual)))))
+
+    # Combine components
+    ocs = 0.5 * dvr + 0.5 * sp
+    return ocs, dvr, sp
 
 
 class SocioEconomicSARIMA:
@@ -18,6 +47,7 @@ class SocioEconomicSARIMA:
         cars_path (str): Path to car ownership Excel file
         occupancy_path (str): Path to bedroom occupancy Excel file
         """
+
         self.burglary_path = burglary_path
         self.cars_path = cars_path
         self.occupancy_path = occupancy_path
@@ -27,11 +57,12 @@ class SocioEconomicSARIMA:
             2: {'normal': (3, 1, 1), 'seasonal': (0, 1, 1, 12)}
         }
         self.models = {}
+        self.training_results = []
         self.burglary_monthly = None
-        self.optimization_params = None
-        self.mae_model = None
+        self.optimization_params = {}
         self.cluster_df = None
         self.forecast_results = None
+        self.model_scores = {}
 
     def load_and_preprocess(self):
         """Load and preprocess all required datasets"""
@@ -80,9 +111,6 @@ class SocioEconomicSARIMA:
 
     def fit_models(self):
         """Train SARIMA models for all wards with cluster-specific parameters"""
-        self.models = {}
-        self.training_results = []
-
         for ward_code, group in self.burglary_monthly.groupby('Ward Code'):
             # Skip wards without socio-economic data
             if ward_code not in self.cluster_df['ward_code'].values:
@@ -97,36 +125,44 @@ class SocioEconomicSARIMA:
             # Prepare time series
             series = group[['Month', 'Count']].set_index('Month').asfreq('MS')['Count']
 
-            try:
-                # Fit model
-                model = SARIMAX(
-                    series,
-                    order=orders['normal'],
-                    seasonal_order=orders['seasonal']
-                )
-                results = model.fit(disp=False)
+            if series.isnull().values.any():
+                print(f"{ward_code} has {series.isnull().sum()} NaN values")
+                series.ffill(inplace=True)
 
-                # Store model
-                self.models[ward_code] = {
-                    'model': results,
-                    'orders': orders,
-                    'cluster': cluster_id
-                }
+            # Divide Train and Test data by 80-20 percentage
+            len_data = len(series)
+            test_month = int(np.ceil(len_data * 0.2))
+            train = series.iloc[:-test_month]
+            test = series.iloc[-test_month:]
 
-                # Generate in-sample predictions for MAE calculation
-                preds = results.get_prediction().predicted_mean
-                residuals = series - preds
+            # Fit model
+            model = SARIMAX(
+                train,
+                order=orders['normal'],
+                seasonal_order=orders['seasonal']
+            )
+            results = model.fit(disp=False)
 
-                self.training_results.append({
-                    'ward_code': ward_code,
-                    'cluster': cluster_id,
-                    'residuals': residuals.values,
-                    'predicted': preds.values,
-                    'actual': series.values
-                })
+            # Store model
+            self.models[ward_code] = {
+                'model': results,
+                'orders': orders,
+                'cluster': cluster_id
+            }
 
-            except Exception as e:
-                print(f"Error fitting {ward_code}: {str(e)}")
+            # Generate in-sample predictions for MAE calculation
+            preds = results.get_forecast(steps=test_month).predicted_mean
+            residuals = test - preds
+
+            print(f"{ward_code} finished successfully")
+
+            self.training_results.append({
+                'ward_code': ward_code,
+                'cluster': cluster_id,
+                'residuals': residuals.values,
+                'predicted': preds.values,
+                'actual': test.values
+            })
 
         print(f"\nSuccessfully trained models for {len(self.models)} wards")
 
@@ -149,26 +185,47 @@ class SocioEconomicSARIMA:
         # Train linear model
         X = results_df[['NoCarPct', 'ZeroRoomPct']]
         y = results_df['mae']
-        self.mae_model = LinearRegression()
-        self.mae_model.fit(X, y)
+        mae_model = LinearRegression()
+        mae_model.fit(X, y)
 
         # Store optimization parameters
-        self.optimization_params = {}
         for _, row in results_df.iterrows():
             # Predict MAE adjustment
             X_ward = [[row['NoCarPct'], row['ZeroRoomPct']]]
-            mae_adj = self.mae_model.predict(X_ward)[0]
+            mae_adj = mae_model.predict(X_ward)[0]
 
             # Determine direction
             mean_residual = np.mean(row['residuals'])
             sign = 1 if mean_residual >= 0 else -1
 
-            self.optimization_params[row['ward_code']] = {
-                'mae_adj': mae_adj,
-                'sign': sign
-            }
+            adj_pred = row['predicted'] + sign * mae_adj
+            adj_mae = mean_absolute_error(row["actual"], adj_pred)
 
-    def forecast_ward(self, ward_code, forecast_start, forecast_end):
+            if adj_mae < row['mae']:
+                self.optimization_params[row['ward_code']] = {
+                    'mae_adj': mae_adj,
+                    'sign': sign
+                }
+
+                ocs, dvr, sp = oscillation_capture_score(row["actual"], adj_pred)
+                self.model_scores[row['ward_code']] = {
+                    "final_mae": adj_mae,
+                    "final_rmse": np.sqrt(mean_squared_error(row["actual"], adj_pred)),
+                    "ocs_score": ocs,
+                    "dvr_score": dvr,
+                    "sp_score": sp
+                }
+            else:
+                ocs, dvr, sp = oscillation_capture_score(row["actual"], row['predicted'])
+                self.model_scores[row['ward_code']] = {
+                    "final_mae": row["mae"],
+                    "final_rmse": np.sqrt(mean_squared_error(row["actual"], row["predicted"])),
+                    "ocs_score": ocs,
+                    "dvr_score": dvr,
+                    "sp_score": sp
+                }
+
+    def forecast_ward(self, ward_code, forecast_dates):
         """
         Forecast burglary counts for a ward
 
@@ -185,11 +242,6 @@ class SocioEconomicSARIMA:
 
         # Generate base forecast
         model_info = self.models[ward_code]
-        forecast_dates = pd.date_range(
-            start=forecast_start,
-            end=forecast_end,
-            freq='MS'
-        )
         steps = len(forecast_dates)
         forecast = model_info['model'].get_forecast(steps=steps)
         base_pred = forecast.predicted_mean
@@ -201,26 +253,29 @@ class SocioEconomicSARIMA:
             return adjusted_pred
         return base_pred
 
-    def forecast_all_wards(self, forecast_start, forecast_end):
+    def forecast_all_wards(self, forecast_start, num_forecast_months):
         """Forecast burglary counts for all wards"""
         results = []
         forecast_dates = pd.date_range(
             start=forecast_start,
-            end=forecast_end,
+            periods=num_forecast_months,
             freq='MS'
         )
 
         for ward_code in self.models.keys():
-            try:
-                preds = self.forecast_ward(ward_code, forecast_start, forecast_end)
-                for date, pred in zip(forecast_dates, preds):
-                    results.append({
-                        'Ward Code': ward_code,
-                        'Month': date.strftime('%Y-%m'),
-                        'Forecast': max(0, pred)  # Ensure non-negative
-                    })
-            except Exception as e:
-                print(f"Error forecasting {ward_code}: {str(e)}")
+            preds = self.forecast_ward(ward_code, forecast_dates)
+            scores = self.model_scores[ward_code]
+            for date, pred in zip(forecast_dates, preds):
+                results.append({
+                    'Ward Code': ward_code,
+                    'Month': date.strftime('%Y-%m'),
+                    'Forecast': max(0, int(np.round(pred))),  # ensure non-negative and integer burglary counts
+                    "mae": scores['final_mae'],
+                    "rmse": scores['final_rmse'],
+                    "ocs_score": scores['ocs_score'],
+                    "dvr_score": scores['dvr_score'],
+                    "sp_score": scores['sp_score']
+                })
 
         self.forecast_results = pd.DataFrame(results)
         return self.forecast_results
@@ -235,6 +290,8 @@ class SocioEconomicSARIMA:
 
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     warnings.filterwarnings("ignore")
 
     # Configuration
@@ -267,10 +324,7 @@ if __name__ == "__main__":
     model.optimize_with_socio_economic()
 
     print("\n=== Generating 2025 Forecasts ===")
-    forecasts = model.forecast_all_wards(
-        forecast_start='2025-03-01',
-        forecast_end='2025-12-01'
-    )
+    forecasts = model.forecast_all_wards(forecast_start='2025-03-01', num_forecast_months=10)
 
     print("\n=== Saving Results ===")
     model.save_forecasts(OUTPUT_PATH)
@@ -279,3 +333,5 @@ if __name__ == "__main__":
     print(f"Generated {len(forecasts)} forecasts")
     print(f"Time period: March 2025 - December 2025")
     print(f"Wards forecasted: {forecasts['Ward Code'].nunique()}")
+
+    print(f"\nFinished in {(time.time() - start_time):.3f} seconds")
