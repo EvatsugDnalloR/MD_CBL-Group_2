@@ -16,7 +16,7 @@ layout=html.Div([
     html.Div([
         html.Label("Select Year:"),
         dcc.Dropdown(
-            id='year-dropdown',
+            id='year-dropdown-index',
             options=[{'label': str(year), 'value': year}
                      for year in years],
             value=current_year  # Default to most recent year
@@ -24,7 +24,7 @@ layout=html.Div([
 
         html.Label("Select Month:"),
         dcc.Dropdown(
-            id='month-dropdown',
+            id='month-dropdown-index',
             options=[
                 {'label': 'January', 'value': 1},
                 {'label': 'February', 'value': 2},
@@ -81,7 +81,7 @@ def load_data(year,month):
 
 
 @callback(Output('content', 'children'), [Input('load-data-btn', 'n_clicks')],
-    [State('year-dropdown', 'value'), State('month-dropdown', 'value')],
+    [State('year-dropdown-index', 'value'), State('month-dropdown-index', 'value')],
     prevent_initial_call=True,running=[(Output("load-data-btn", "disabled"), True, False)])
 def load_map(_,selected_year, selected_month):
     """

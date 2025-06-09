@@ -7,7 +7,7 @@ app = Dash(__name__, title="London Residential Burglary & Police Allocation Dash
 
 
 app.layout = html.Div([
-    dcc.Location(id='redirect'),
+    dcc.Location(id='redirect',refresh="callback-nav"),
     html.H1(
         "London Residential Burglary & Police Allocation Dashboard",
         style={"textAlign": "center"}
