@@ -1,7 +1,12 @@
 import pandas as pd
-pd.set_option('display.max_columns', None)
 import plotly.express as px
-from config import path, eda
+from config import path, eda, use_api
+import xlwings as xw
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+import requests
+import json
+import joblib
 
 
 class Dataset:
@@ -37,7 +42,6 @@ class Dataset:
                 m = self.add_zero(m)  # e.g. 5 changes to 05
                 try:
                     df_y_m = pd.read_csv(f"all_data/{str(y)}-{m}-metropolitan-street-burglary.csv")
-                    df_y_m = df_y_m[df_y_m['Crime type'] == 'Burglary']
                     self.df_names.append(df_y_m)
                 except:  # csv with this year and month doesn't exist, move on toward next combo
                     continue
@@ -54,7 +58,7 @@ class Dataset:
         :return: cleaned dataset.
         """
         df = self.make_dataset()
-        print(f"The dataset has {len(df)} rows and {len(df.columns)} columns.\n"
+        print(f"The dataset has {len(df)} rows.\n"
               f"There are {sum(df['Longitude'].isnull())} rows with no crime locations." if self.eda else "")
 
         df = df.dropna(subset=['Longitude', 'Latitude'])  # remove rows with empty locations
@@ -84,32 +88,11 @@ class Dataset:
 
         city_of_london_mask = df['LSOA name'].str.contains('City of London')
         df_col = df[city_of_london_mask]
-        print(f"There are {len(df_col)} burglaries that took place in the City of London.\n" if self.eda else "")
+        print(f"There are {len(df_col)} burglaries that took place in the City of London." if self.eda else "")
         df = df[~city_of_london_mask]
 
         df = df.drop(['LAD code', 'Unnamed: 0'], axis=1)
         df.to_csv(f"{self.path}/burglary.csv", index=False)  # save cleaned dataset
-
-        return df
-
-    def perform_eda(self) -> pd.DataFrame:
-        """
-        Perform EDA on cleaned dataset.
-        :return: cleaned dataset.
-        """
-        df = self.clean_dataset()
-        print(f"Investigation outcomes:\n{df['Last outcome category'].value_counts()}\n\n"
-              f"Burglaries per LSOA code:\n{df['LSOA name'].value_counts()}" if self.eda else "")
-
-        if self.eda:
-            df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
-            df_count = df_count.pivot(index='Month', columns='Year', values='count')
-            df_count = df_count.sort_index()
-            fig = px.line(df_count, markers=True, title="Number of Burglaries per Month",
-                          labels={"Month": "Month", "value": "Count"}, line_shape='linear')
-            fig.update_layout(xaxis=dict(tickmode='array', tickvals=list(range(1, 13))), xaxis_title="Month",
-                              yaxis_title="Count", legend_title="Year")
-            fig.show()
 
         return df
 
@@ -126,6 +109,92 @@ class Dataset:
         not_residential_pattern = "|".join(not_residential_list)
         not_residential_mask = df['Location'].str.contains(not_residential_pattern)
         df_not = df[~not_residential_mask]  # remove all non-residential locations
-        df_not.to_csv(f"{self.path}/burglary.csv", index=False)
+
+        if self.eda:
+            print(f"There are {len(df) - len(df_not)} non-residential burglaries.\n"
+                  f"The cleaned dataset contains {len(df_not)} rows.\n" if self.eda else "")
+            df_count = df.groupby(['Year', 'Month']).size().reset_index(name='count')  # get crime counts per month per year
+            df_count = df_count.pivot(index='Month', columns='Year', values='count')
+            df_count = df_count.sort_index()
+            fig = px.line(df_count, markers=True, title="Number of Residential Burglaries per Month",
+                          labels={"Month": "Month", "value": "Count"}, line_shape='linear')
+            fig.update_layout(xaxis=dict(tickmode='array', tickvals=list(range(1, 13))), xaxis_title="Month",
+                              yaxis_title="Count", legend_title="Year")
+            fig.show()
+
+        df_not.to_csv(f"{self.path}/residential_burglary.csv", index=False)
 
         return df_not
+
+
+class Population:
+    """
+    Create the population dataframe from all years for all wards.
+    :attributes: file_path
+    """
+    def __init__(self, file_path: str):
+        """
+        Initialize the Population object.
+        :param file_path: path to Excel file containing population data
+        """
+        self.file_path = file_path
+
+    def population_df(self) -> pd.DataFrame:
+        """
+        Create dataframe with population data from all years.
+        :return: population dataframe.
+        """
+        wb = xw.Book(self.file_path)
+        sheet = wb.sheets['Ward']
+        all_data = []
+
+        for year in ['2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025']:
+            sheet.range('E1').value = year
+            wb.app.calculate()
+            data = sheet.range('A3:K628').value
+
+            df_year = pd.DataFrame(data, columns=['Ward code', 'Ward name', 'Borough', 'Population', 'Hectares',
+                                                  'Square Kilometres', 'Population per hectare',
+                                                  'Population per square kilometre', 'Unnamed: 8',
+                                                  'Census population (2011)', 'Population per hectare.1'])
+            df_year['Year'] = int(year)
+            all_data.append(df_year)
+
+        df = pd.concat(all_data, ignore_index=True)
+        wb.close()
+
+        return df
+
+    def new_ward_codes_df(self, old_codes: list[str]) -> dict[str, list]:
+        """
+        Use a JSON API to convert the 2022 ward codes to the current 2024 ward codes.
+        The API returns the same dictionary as in `population_new_ward_codes.pkl`.
+        :param old_codes: list of old ward codes
+        :return: dictionary with the old wards as keys and their new ward codes as values.
+        """
+        new_codes = {}
+
+        for c in old_codes:
+            r = requests.get(f"https://findthatpostcode.uk/areas/{c}")
+            data = json.loads(r.text)
+            new_codes[c] = data['data']['attributes']['successor']
+
+        return new_codes
+
+    def clean_population_df(self) -> pd.DataFrame:
+        """
+        Obtain population data from all years for all wards.
+        Rename the old ward codes to the new codes.
+        Aggregate the rows for each ward per year by averages.
+        This method returns the same dataframe as in `population.csv`.
+        :return: population dataframe with necessary columns.
+        """
+        df = self.population_df()
+        old_ward_codes = list(df['Ward code'].unique())
+        new_ward_codes = self.new_ward_codes_df(old_ward_codes) if use_api else joblib.load('lsoa_ward_data/population_new_ward_codes.pkl')
+        df['New ward code'] = df['Ward code'].map(lambda k: new_ward_codes[k] if new_ward_codes[k] else [k])
+        df  = df.explode('New ward code', ignore_index=True)
+        cols_to_average = ['Population', 'Square Kilometres', 'Population per square kilometre']
+        df = df.groupby(['New ward code', 'Year'])[cols_to_average].mean().reset_index()
+
+        return df
