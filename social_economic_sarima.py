@@ -1,40 +1,16 @@
-import pandas as pd
-import numpy as np
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+import os
 import time
 import warnings
-import os
 
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.preprocessing import StandardScaler
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-def oscillation_capture_score(actual, predicted):
-    """Calculate a composite score that detects oscillation pattern matching"""
-    n = len(actual)
-    if n < 3:
-        return 0.0  # Not enough data
-
-    # 1. Detrended Variability Ratio (DVR)
-    var_actual = np.var(actual)
-    var_pred = np.var(predicted)
-
-    # Handle near-zero variance cases
-    if var_actual < 1e-10 and var_pred < 1e-10:
-        dvr = 1.0
-    elif var_actual < 1e-10:
-        dvr = 0.0
-    else:
-        dvr = min(var_pred / var_actual, 2.0)  # Cap at 2.0
-
-    # 2. Smoothness Penalty (SP)
-    pred_diff = np.diff(predicted)
-    sp = 1 - np.exp(-np.mean(np.abs(pred_diff)) / max(1, np.mean(np.abs(np.diff(actual)))))
-
-    # Combine components
-    ocs = 0.5 * dvr + 0.5 * sp
-    return ocs, dvr, sp
+from model_fitting_score import oscillation_capture_score
 
 
 class SocioEconomicSARIMA:
@@ -52,9 +28,9 @@ class SocioEconomicSARIMA:
         self.cars_path = cars_path
         self.occupancy_path = occupancy_path
         self.cluster_orders = {
-            0: {'normal': (1, 1, 3), 'seasonal': (0, 1, 3, 12)},
-            1: {'normal': (2, 1, 2), 'seasonal': (0, 1, 2, 12)},
-            2: {'normal': (3, 1, 1), 'seasonal': (0, 1, 1, 12)}
+            0: {"normal": (1, 1, 3), "seasonal": (0, 1, 3, 12)},
+            1: {"normal": (2, 1, 2), "seasonal": (0, 1, 2, 12)},
+            2: {"normal": (3, 1, 1), "seasonal": (0, 1, 1, 12)}
         }
         self.models = {}
         self.training_results = []
@@ -77,53 +53,53 @@ class SocioEconomicSARIMA:
         ).size().reset_index(name="Count")
 
         # Load and process socio-economic data
-        cars_df = pd.read_excel(self.cars_path, sheet_name='2021')
-        cars_df['NoCarPct'] = cars_df['none'] / cars_df['All households']
+        cars_df = pd.read_excel(self.cars_path, sheet_name="2021")
+        cars_df["NoCarPct"] = cars_df["none"] / cars_df["All households"]
 
-        occupancy_df = pd.read_excel(self.occupancy_path, sheet_name='2021')
+        occupancy_df = pd.read_excel(self.occupancy_path, sheet_name="2021")
         occupancy_df["ZeroRoomPct"] = occupancy_df["0"] / occupancy_df["All Households"]
 
         # Merge socio-economic data
         self.cluster_df = pd.merge(
-            cars_df[['ward code', 'NoCarPct']],
-            occupancy_df[['ward code', 'ZeroRoomPct']],
-            on='ward code',
-            how='inner'
-        ).rename(columns={'ward code': 'ward_code'})
+            cars_df[["ward code", "NoCarPct"]],
+            occupancy_df[["ward code", "ZeroRoomPct"]],
+            on="ward code",
+            how="inner"
+        ).rename(columns={"ward code": "ward_code"})
 
         print(f"Loaded {len(self.burglary_monthly)} burglary records")
         print(f"Loaded socio-economic data for {len(self.cluster_df)} wards")
 
     def perform_clustering(self, n_clusters=3):
         """Cluster wards based on socio-economic factors"""
-        X = self.cluster_df[['NoCarPct', 'ZeroRoomPct']]
+        X = self.cluster_df[["NoCarPct", "ZeroRoomPct"]]
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-        self.cluster_df['cluster'] = kmeans.fit_predict(X_scaled)
+        self.cluster_df["cluster"] = kmeans.fit_predict(X_scaled)
 
         # Print cluster distribution
-        cluster_counts = self.cluster_df['cluster'].value_counts().sort_index()
+        cluster_counts = self.cluster_df["cluster"].value_counts().sort_index()
         print("\nCluster Distribution:")
         for cluster_id, count in cluster_counts.items():
             print(f"Cluster {cluster_id}: {count} wards")
 
     def fit_models(self):
         """Train SARIMA models for all wards with cluster-specific parameters"""
-        for ward_code, group in self.burglary_monthly.groupby('Ward Code'):
+        for ward_code, group in self.burglary_monthly.groupby("Ward Code"):
             # Skip wards without socio-economic data
-            if ward_code not in self.cluster_df['ward_code'].values:
+            if ward_code not in self.cluster_df["ward_code"].values:
                 continue
 
             # Get cluster-specific orders
             cluster_id = self.cluster_df.loc[
-                self.cluster_df['ward_code'] == ward_code, 'cluster'
+                self.cluster_df["ward_code"] == ward_code, "cluster"
             ].values[0]
             orders = self.cluster_orders[cluster_id]
 
             # Prepare time series
-            series = group[['Month', 'Count']].set_index('Month').asfreq('MS')['Count']
+            series = group[["Month", "Count"]].set_index("Month").asfreq("MS")["Count"]
 
             if series.isnull().values.any():
                 print(f"{ward_code} has {series.isnull().sum()} NaN values")
@@ -138,16 +114,16 @@ class SocioEconomicSARIMA:
             # Fit model
             model = SARIMAX(
                 train,
-                order=orders['normal'],
-                seasonal_order=orders['seasonal']
+                order=orders["normal"],
+                seasonal_order=orders["seasonal"]
             )
             results = model.fit(disp=False)
 
             # Store model
             self.models[ward_code] = {
-                'model': results,
-                'orders': orders,
-                'cluster': cluster_id
+                "model": results,
+                "orders": orders,
+                "cluster": cluster_id
             }
 
             # Generate in-sample predictions for MAE calculation
@@ -157,11 +133,11 @@ class SocioEconomicSARIMA:
             print(f"{ward_code} finished successfully")
 
             self.training_results.append({
-                'ward_code': ward_code,
-                'cluster': cluster_id,
-                'residuals': residuals.values,
-                'predicted': preds.values,
-                'actual': test.values
+                "ward_code": ward_code,
+                "cluster": cluster_id,
+                "residuals": residuals.values,
+                "predicted": preds.values,
+                "actual": test.values
             })
 
         print(f"\nSuccessfully trained models for {len(self.models)} wards")
@@ -173,42 +149,42 @@ class SocioEconomicSARIMA:
         results_df = pd.merge(
             results_df,
             self.cluster_df,
-            on='ward_code',
-            how='left'
+            on="ward_code",
+            how="left"
         )
 
         # Compute MAE for each ward
-        results_df['mae'] = results_df.apply(
-            lambda x: np.mean(np.abs(x['residuals'])), axis=1
+        results_df["mae"] = results_df.apply(
+            lambda x: np.mean(np.abs(x["residuals"])), axis=1
         )
 
         # Train linear model
-        X = results_df[['NoCarPct', 'ZeroRoomPct']]
-        y = results_df['mae']
+        X = results_df[["NoCarPct", "ZeroRoomPct"]]
+        y = results_df["mae"]
         mae_model = LinearRegression()
         mae_model.fit(X, y)
 
         # Store optimization parameters
         for _, row in results_df.iterrows():
             # Predict MAE adjustment
-            X_ward = [[row['NoCarPct'], row['ZeroRoomPct']]]
+            X_ward = [[row["NoCarPct"], row["ZeroRoomPct"]]]
             mae_adj = mae_model.predict(X_ward)[0]
 
             # Determine direction
-            mean_residual = np.mean(row['residuals'])
+            mean_residual = np.mean(row["residuals"])
             sign = 1 if mean_residual >= 0 else -1
 
-            adj_pred = row['predicted'] + sign * mae_adj
+            adj_pred = row["predicted"] + sign * mae_adj
             adj_mae = mean_absolute_error(row["actual"], adj_pred)
 
-            if adj_mae < row['mae']:
-                self.optimization_params[row['ward_code']] = {
-                    'mae_adj': mae_adj,
-                    'sign': sign
+            if adj_mae < row["mae"]:
+                self.optimization_params[row["ward_code"]] = {
+                    "mae_adj": mae_adj,
+                    "sign": sign
                 }
 
                 ocs, dvr, sp = oscillation_capture_score(row["actual"], adj_pred)
-                self.model_scores[row['ward_code']] = {
+                self.model_scores[row["ward_code"]] = {
                     "final_mae": adj_mae,
                     "final_rmse": np.sqrt(mean_squared_error(row["actual"], adj_pred)),
                     "ocs_score": ocs,
@@ -216,8 +192,8 @@ class SocioEconomicSARIMA:
                     "sp_score": sp
                 }
             else:
-                ocs, dvr, sp = oscillation_capture_score(row["actual"], row['predicted'])
-                self.model_scores[row['ward_code']] = {
+                ocs, dvr, sp = oscillation_capture_score(row["actual"], row["predicted"])
+                self.model_scores[row["ward_code"]] = {
                     "final_mae": row["mae"],
                     "final_rmse": np.sqrt(mean_squared_error(row["actual"], row["predicted"])),
                     "ocs_score": ocs,
@@ -243,13 +219,13 @@ class SocioEconomicSARIMA:
         # Generate base forecast
         model_info = self.models[ward_code]
         steps = len(forecast_dates)
-        forecast = model_info['model'].get_forecast(steps=steps)
+        forecast = model_info["model"].get_forecast(steps=steps)
         base_pred = forecast.predicted_mean
 
         # Apply socio-economic adjustment
         if ward_code in self.optimization_params:
             params = self.optimization_params[ward_code]
-            adjusted_pred = base_pred + params['sign'] * params['mae_adj']
+            adjusted_pred = base_pred + params["sign"] * params["mae_adj"]
             return adjusted_pred
         return base_pred
 
@@ -259,22 +235,22 @@ class SocioEconomicSARIMA:
         forecast_dates = pd.date_range(
             start=forecast_start,
             periods=num_forecast_months,
-            freq='MS'
+            freq="MS"
         )
 
-        for ward_code in self.models.keys():
+        for ward_code in self.models:
             preds = self.forecast_ward(ward_code, forecast_dates)
             scores = self.model_scores[ward_code]
-            for date, pred in zip(forecast_dates, preds):
+            for date, pred in zip(forecast_dates, preds, strict=False):
                 results.append({
-                    'Ward Code': ward_code,
-                    'Month': date.strftime('%Y-%m'),
-                    'Forecast': max(0, int(np.round(pred))),  # ensure non-negative and integer burglary counts
-                    "mae": scores['final_mae'],
-                    "rmse": scores['final_rmse'],
-                    "ocs_score": scores['ocs_score'],
-                    "dvr_score": scores['dvr_score'],
-                    "sp_score": scores['sp_score']
+                    "Ward Code": ward_code,
+                    "Month": date.strftime("%Y-%m"),
+                    "Forecast": max(0, int(np.round(pred))),  # ensure non-negative and integer burglary counts
+                    "mae": scores["final_mae"],
+                    "rmse": scores["final_rmse"],
+                    "ocs_score": scores["ocs_score"],
+                    "dvr_score": scores["dvr_score"],
+                    "sp_score": scores["sp_score"]
                 })
 
         self.forecast_results = pd.DataFrame(results)
@@ -295,10 +271,10 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore")
 
     # Configuration
-    BURGLARY_PATH = 'data/residential_burglary.csv'
-    CARS_PATH = 'data/housing/cars_or_vans_wards.xlsx'
-    OCCUPANCY_PATH = 'data/housing/occupancy_rating_bedrooms_wards.xlsx'
-    OUTPUT_PATH = 'forecasts_output/2025_burglary_forecasts.csv'
+    BURGLARY_PATH = "data/residential_burglary.csv"
+    CARS_PATH = "data/housing/cars_or_vans_wards.xlsx"
+    OCCUPANCY_PATH = "data/housing/occupancy_rating_bedrooms_wards.xlsx"
+    OUTPUT_PATH = "forecasts_output/2025_burglary_forecasts.csv"
 
     # Create output directory if needed
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
@@ -324,14 +300,14 @@ if __name__ == "__main__":
     model.optimize_with_socio_economic()
 
     print("\n=== Generating 2025 Forecasts ===")
-    forecasts = model.forecast_all_wards(forecast_start='2025-03-01', num_forecast_months=10)
+    forecasts = model.forecast_all_wards(forecast_start="2025-03-01", num_forecast_months=10)
 
     print("\n=== Saving Results ===")
     model.save_forecasts(OUTPUT_PATH)
 
     print("\n=== Forecast Summary ===")
     print(f"Generated {len(forecasts)} forecasts")
-    print(f"Time period: March 2025 - December 2025")
+    print("Time period: March 2025 - December 2025")
     print(f"Wards forecasted: {forecasts['Ward Code'].nunique()}")
 
     print(f"\nFinished in {(time.time() - start_time):.3f} seconds")
