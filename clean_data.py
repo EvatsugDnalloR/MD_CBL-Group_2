@@ -4,6 +4,7 @@ from config import path, eda
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+
 class Dataset:
     """
     Make one dataset containing burglary data from all dates.
@@ -36,7 +37,7 @@ class Dataset:
             for m in range(1, 13):
                 m = self.add_zero(m)  # e.g. 5 changes to 05
                 try:
-                    df_y_m = pd.read_csv(f"all_data/{str(y)}-{m}-metropolitan-street-burglary.csv")
+                    df_y_m = pd.read_csv(f"data/all_burglaries/{str(y)}-{m}-metropolitan-street-burglary.csv")
                     self.df_names.append(df_y_m)
                 except:  # csv with this year and month doesn't exist, move on toward next combo
                     continue

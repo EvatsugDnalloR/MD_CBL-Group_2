@@ -1,7 +1,7 @@
 [project]
 name = "md-cbl-group-2"
 version = "0.1.0"
-description = "Add your description here"
+description = "Hybrid SARIMA forecasting system for London residential burglary prediction with socio-economic optimization"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
