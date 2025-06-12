@@ -11,9 +11,8 @@ with our police allocation formula depending on the burglary numbers.
 ### Key Features:
 - Hybrid SARIMA forecasting with socio-economic optimization
 - Ward-level predictions with one-month granularity
-- Novel oscillation capture metrics for model evaluation
+- Oscillation capture metrics for model evaluation
 - Dashboard integration for visual resource planning
-- Ethical considerations in crime forecasting
 
 ## Methodology
 
