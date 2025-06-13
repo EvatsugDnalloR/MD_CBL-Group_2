@@ -88,8 +88,8 @@ Note that the dashboard is running on the localhost http://127.0.0.1:8050/.
 
 *   **Data Filtering:** Select a specific year and month to display map with the filtered data.
 
-*   **Map Visualization:**
-    *   Displays a map of London wards,colour-coded to indicate the predicted number of burglaries
+*   **Map Visualisation:**
+    *   Displays a map of London wards, colour-coded to indicate the predicted number of burglaries
     *   Users can select the map to show either burglary prediction or police officers allocated.
     *   Hovering over a ward reveals its code, name, burglary prediction and number of police officers allocated.
 
