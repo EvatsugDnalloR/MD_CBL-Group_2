@@ -121,3 +121,8 @@ class Dataset:
         df_not.to_csv(f"{self.path}/residential_burglary.csv", index=False)
 
         return df_not
+
+
+dataset = Dataset(path, eda)
+df_all_burglary = dataset.clean_dataset()  # get cleaned dataset and perform EDA if eda=True
+df = dataset.get_residential_burglaries(df_all_burglary)  # final dataset
