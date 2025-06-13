@@ -36,7 +36,7 @@ Our hybrid approach combines three key components:
 ```bash
 git clone https://github.com/EvatsugDnalloR/MD_CBL-Group_2.git
 ```
-$\hspace{0.8cm}$**Note**: make sure that `gitlfs` is installed before cloning, if not you can install it by running:
+$\hspace{0.8cm}$ **Note**: make sure that `gitlfs` is installed before cloning, if not you can install it by running:
 ```bash
 git lfs install
 ```
@@ -44,7 +44,7 @@ git lfs install
 ```bash
 uv sync
 ```
-$\hspace{0.8cm}$If you only need to run the dashboard,
+$\hspace{0.8cm}$ If you only need to run the dashboard,
    the only dependencies that you have to install is `numpy`, `pandas`, `geopandas`,
 `plotly`, and `dash`.
 
@@ -108,5 +108,5 @@ there is a 25% improvement on those scores.
 
 ## Contributors:
 - Data Cleaning and Fine-Tune Ward Models - **Juliette Hattingh-Haasbroek** (1779192)
-- Hybrid Model Architecture, Model Performance Testing, Fitting Scores, and the main forecasting pipeline - **Gustave Rolland** (1957635)
+- Hybrid Model Architecture, Model Performance Testing, Fitting Scores, and the Main Forecasting Pipeline - **Gustave Rolland** (1957635)
 - Dashboard - **Roberto Tormo Navarro** (1936786)
