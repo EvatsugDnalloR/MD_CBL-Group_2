@@ -82,10 +82,42 @@ Run the main forecasting pipeline `social_economic_sarima.py`, which will:
 ### Dashboard
 All the dashboard-related files are in the `dashboard` module. 
 To run the dashboard, run `app.py` in this module. 
-Note that the dashboard is running on the localhost.
+Note that the dashboard is running on the localhost http://127.0.0.1:8050/.
 
-**TODO: add more description for the functionality of the dashboard**
+### Main Page Functionalities
 
+*   **Data Filtering:** Select a specific year and month to display map with the filtered data.
+
+*   **Map Visualization:**
+    *   Displays a map of London wards,colour-coded to indicate the predicted number of burglaries
+    *   Users can select the map to show either burglary prediction or police officers allocated.
+    *   Hovering over a ward reveals its code, name, burglary prediction and number of police officers allocated.
+
+*   **Ward Navigation:**
+    *   Search for a specific ward by name or code to navigate to its dedicated page.
+    *   Clicking a ward on the map also navigates to its dedicated page.
+
+*   **Socio-Economic Data:**
+    *   A button allows users to display an additional map showing socio-economic factors alongside the main map.
+
+### Ward Page Functionalities
+
+*   **Ward Data:**
+    *   Displays the name and code of the selected ward.
+    *   Allows to filter data by year and month for this specific ward.
+    *   Shows number of police officers allocated, burglary prediction, Mean Absolute Error, Root Mean Squared Error or  historical burglary count for the selected year and month.
+
+*   **Time-Series Graphs:**
+    *   **Burglary Prediction Graph:** Shows historical and predicted burglary counts over time for the ward.
+    *   **Police Allocation Graph:** Displays the number of police officers allocated to the ward from March 2025 to December 2025 as a bar chart.
+    * 
+## Dashboard Files 
+
+*   `dashboard/app.py`: The main Dash application file that initializes the app and defines the overall layout.
+*   `dashboard/pages/index.py`: Defines the layout and functionalities for the main dashboard page.
+*   `dashboard/pages/ward.py`: Defines the layout and functionalities for the individual ward pages.
+*   `dashboard/data.py`: Loads data used in the dashboard from the `dashboard/'static'` folder.
+  
 ## Summary of Key Findings
 1. Serious underfitting issue for the models fitted by `pmdarima`:
    - There exist wards with predictions without a seasonal order, causing the forecasting to be a straight line.
