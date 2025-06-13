@@ -51,8 +51,10 @@ $\hspace{0.8cm}$ If you only need to run the dashboard,
 ## Usage
 
 ### Data Cleaning
-Make sure that the original burglaries dataset downloaded from the [UK police website](https://data.police.uk/data/)
-and simply run the `clean_data.py` script.
+All burglary data from the period December 2013 until February 2025 can be found in the `data/all_burglaries` folder.
+This data was downloaded from the [UK police website](https://data.police.uk/data/).
+The cleaning object can be found in `clean_data.py`, which outputs the already existing CSV
+file `residential_burglary.csv` that can be found in the `data` folder.
 
 ### Performance Comparison between **Naive Forecasting Model** and **Hybrid Forecasting Model**
 The Python scripts and Jupyter Notebooks for performance testing of the models can be found in the `model_performance_testing` module, 
