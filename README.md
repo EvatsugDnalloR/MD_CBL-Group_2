@@ -110,13 +110,13 @@ Note that the dashboard is running on the localhost http://127.0.0.1:8050/.
 *   **Time-Series Graphs:**
     *   **Burglary Prediction Graph:** Shows historical and predicted burglary counts over time for the ward.
     *   **Police Allocation Graph:** Displays the number of police officers allocated to the ward from March 2025 to December 2025 as a bar chart.
-    * 
+    
 ## Dashboard Files 
 
 *   `dashboard/app.py`: The main Dash application file that initializes the app and defines the overall layout.
 *   `dashboard/pages/index.py`: Defines the layout and functionalities for the main dashboard page.
-*   `dashboard/pages/ward.py`: Defines the layout and functionalities for the individual ward pages.
-*   `dashboard/data.py`: Loads data used in the dashboard from the `dashboard/'static'` folder.
+*   `dashboard/pages/ward.py`: Defines the layout and functionalities for the ward pages.
+*   `dashboard/data.py`: Loads data used in the dashboard from the `dashboard/static` folder.
   
 ## Summary of Key Findings
 1. Serious underfitting issue for the models fitted by `pmdarima`:
