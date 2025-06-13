@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-We develop an automated, data-driven police demand forecasting system to help reduce residential burglareis 
+We develop an automated, data-driven police demand forecasting system to help reduce residential burglaries 
 in London. 
 By combining time-series forecasting with socio-economic factors, 
 our solution enables police forces to forecast the number of future burglaries in each ward and efficiently allocate resources
@@ -113,7 +113,7 @@ Note that the dashboard is running on the localhost http://127.0.0.1:8050/.
     
 ## Dashboard Files 
 
-*   `dashboard/app.py`: The main Dash application file that initializes the app and defines the overall layout.
+*   `dashboard/app.py`: The main Dash application file that initialises the app and defines the overall layout.
 *   `dashboard/pages/index.py`: Defines the layout and functionalities for the main dashboard page.
 *   `dashboard/pages/ward.py`: Defines the layout and functionalities for the ward pages.
 *   `dashboard/data.py`: Loads data used in the dashboard from the `dashboard/static` folder.
