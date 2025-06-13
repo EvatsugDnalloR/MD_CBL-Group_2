@@ -87,10 +87,12 @@ class SocioEconomicSARIMA:
 
     def fit_models(self):
         """
+        Train SARIMA models for all wards with cluster-specific parameters
+
         TODO: add condition checking for non-clustering model fitting (i.e. pure SARIMA)
         :return:
         """
-        """Train SARIMA models for all wards with cluster-specific parameters"""
+
         for ward_code, group in self.burglary_monthly.groupby("Ward Code"):
             # Skip wards without socio-economic data
             if ward_code not in self.cluster_df["ward_code"].values:
