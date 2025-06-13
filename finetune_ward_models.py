@@ -5,6 +5,9 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from pmdarima.arima import auto_arima, ADFTest
 import statistics
 import warnings
+
+from clean_data import Dataset
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
@@ -73,3 +76,13 @@ class FineTune:
               f"Max. RMSE: {max(all_rmse):.3f}\nMax. MAE: {max(all_mae):.3f}\n")
 
         return df_orders
+
+
+if __name__ == "__main__":
+    dataset = Dataset()
+    df_all_burglary = dataset.clean_dataset()  # get cleaned dataset and perform EDA if eda=True
+    df = dataset.get_residential_burglaries(df_all_burglary)  # final dataset
+
+    fine_tune_models = FineTune(df)
+    df_orders = fine_tune_models.fine_tune_all_metrics()
+    print(df_orders)

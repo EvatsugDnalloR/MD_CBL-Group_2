@@ -1,6 +1,5 @@
 import pandas as pd
 import plotly.express as px
-from config import path, eda
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -9,7 +8,7 @@ class Dataset:
     """
     Make one dataset containing burglary data from all dates.
     """
-    def __init__(self, path: str = path, eda: bool = eda) -> None:
+    def __init__(self, path: str = "data", eda: bool = False) -> None:
         """
         Initialize the Dataset object.
         :param path: path to directory to store dataframe, make sure it exists!
@@ -123,6 +122,7 @@ class Dataset:
         return df_not
 
 
-dataset = Dataset(path, eda)
-df_all_burglary = dataset.clean_dataset()  # get cleaned dataset and perform EDA if eda=True
-df = dataset.get_residential_burglaries(df_all_burglary)  # final dataset
+if __name__ == "__main__":
+    dataset = Dataset()
+    df_all_burglary = dataset.clean_dataset()  # get cleaned dataset and perform EDA if eda=True
+    df = dataset.get_residential_burglaries(df_all_burglary)  # final dataset
