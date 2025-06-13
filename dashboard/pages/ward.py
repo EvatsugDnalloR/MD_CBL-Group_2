@@ -8,10 +8,22 @@ register_page(__name__, path_template="/ward/<ward_code>")
 
 years= sorted(burglary['Year'].unique())
 
+graph_config = {
+    "doubleClick": "reset+autosize",
+    "modeBarButtonsToRemove": [
+        "zoom", "pan", "select",   "zoomIn", "zoomOut",
+        "autoScale", "resetScale", "lasso2d", "toImage", "resetView",
+    ],
+    "displaylogo": False,
+}
 
 
 
-def layout(ward_code=None, **kwargs):
+def layout(ward_code=None):
+
+    '''
+    Creates layout for the ward page
+    '''
 
     if ward_code.upper() in wards["Ward code"].values:
 
@@ -47,10 +59,9 @@ def layout(ward_code=None, **kwargs):
                         {'label': 'September', 'value': 9},
                         {'label': 'October', 'value': 10},
                         {'label': 'November', 'value': 11},
-                        {'label': 'December', 'value': 13}
+                        {'label': 'December', 'value': 12}
 
                     ]
-
 
                 ),
             ], style={'width': '30%', 'margin': '0 auto', 'padding': '10px'}),
@@ -75,55 +86,23 @@ def layout(ward_code=None, **kwargs):
 
             html.Div(id='ward-content'),
 
-
-
             html.Div([
 
                 html.Div([
                     dcc.Graph(
-                        id="burglary-prediction-graph"
-                    ),
-                html.Div([
-
-                    html.Div(
-                        "Select Year Range",
-                        style={"textAlign": "center", "marginBottom": "10px"}
-                    ),
-                    dcc.RangeSlider(
-                        id="year-range-slider",
-                        min=2013,
-                        max=2025,
-                        step=1,
-                        marks={year: str(year) for year in range(2013, 2026)},
-                        value=[2013, 2025]
-                    )], style={"margin": "20px 0"}),
-
-                    html.Div(
-                        "Select Month Range",
-                        style={"textAlign": "center", "marginBottom": "10px"}
-                    ),
-
-                    dcc.RangeSlider(
-                        id="month-range-slider",
-                        min=1,
-                        max=12,
-                        step=1,
-                        marks={month: str(month) for month in range(1, 13)},
-                        value=[1, 12]
-                    ),
-
-
+                        id="burglary-prediction-graph",
+                        config=graph_config,
+                        figure=burglary_prediction_graph(ward_code)
+                    )
                 ], style={"flex": "1", "padding": "10px"}),
-
 
                 html.Div([
                     dcc.Graph(
-                        id="police-allocation-graph",figure=police_allocation_graph(ward_code)
+                        id="police-allocation-graph", figure=police_allocation_graph(ward_code),
+                        config=graph_config
                     )
 
-
                 ], style={"flex": "1", "padding": "10px"}),
-
 
             ], style={"display": "flex", "flexDirection": "row"})
         ])
@@ -152,12 +131,13 @@ def load_ward_data(_,selected_year, selected_month, ward_code):
         data.append(
             html.Div([
                 html.P(f"Police Allocation: {pred_row['officers']}", style={"textAlign": "center"}),
-                html.P(f"Risk Factor: {pred_row['risk']}", style={"textAlign": "center"}),
                 html.P(f"Prediction: {pred_row['prediction']}", style={"textAlign": "center"}),
+                html.P(f"Mean Absolute Error: {pred_row['mae']:.2f}", style={"textAlign": "center"}),
+                html.P(f"Root Mean Squared Error: {pred_row['rmse']:.2f}", style={"textAlign": "center"}),
             ])
         )
     if filtered_burglary.empty:
-        data.append(html.H3("No burglary data available for the selected year and month.", style={"textAlign": "center"}))
+        data.append(html.H3("No historical burglary data available for the selected year and month.", style={"textAlign": "center"}))
     else:
         data.append(
             html.Div([
@@ -167,89 +147,90 @@ def load_ward_data(_,selected_year, selected_month, ward_code):
 
     return html.Div(data)
 
-@callback( Output("burglary-prediction-graph", "figure"),[Input('year-range-slider', 'value'), Input('month-range-slider', 'value')]
-           , State('ward_code', 'data'))
-def burglary_prediction_graph( year_range, month_range, ward_code):
+
+def burglary_prediction_graph(ward_code):
 
     filtered_predictions = predictions[
-        (predictions["Ward_Code"] == ward_code) &
-        (predictions["Year"].between(year_range[0], year_range[1])) &
-        (predictions["Month"].between(month_range[0], month_range[1]))
-    ]
-
-    filtered_predictions.loc[:, "Year_Month"] = (
-        filtered_predictions["Year"].astype(str) + "-" +
-        filtered_predictions["Month"].astype(str).str.zfill(2)
-    )
-
-    filtered_predictions = filtered_predictions.sort_values("Year_Month")
+        (predictions["Ward_Code"] == ward_code)
+    ].sort_values("Date")
 
     filtered_burglary= burglary[
-        (burglary["Ward code"] == ward_code) &
-        (burglary["Year"].between(year_range[0], year_range[1])) &
-        (burglary["Month"].between(month_range[0], month_range[1]))
-    ]
+        (burglary["Ward code"] == ward_code)
+    ].sort_values("Date")
 
-    filtered_burglary.loc[:, "Year_Month"] = (
-        filtered_burglary["Year"].astype(str) + "-" +
-        filtered_burglary["Month"].astype(str).str.zfill(2)
+    fig = go.Figure()
+
+    # Historical burglary
+    fig.add_trace(go.Scatter(
+        x=filtered_burglary["Date"],
+        y=filtered_burglary["burglary_count"],
+        mode="lines",
+        name="Historical burglary",
+        legendgroup="Historical",
+        line=dict(color="purple")
+    ))
+
+    # Predicted burglary
+    fig.add_trace(go.Scatter(
+        x=filtered_predictions["Date"],
+        y=filtered_predictions["prediction"],
+        mode="lines",
+        name="Predicted burglary",
+        legendgroup="Predicted",
+        line=dict(color="blue")
+    ))
+
+    fig.update_xaxes(
+        type="date",
+        tickformat="%Y-%m",
+        rangeslider_visible=True,
+        showgrid=False,
+        rangeselector=dict(
+            buttons=[
+                dict(count=1, label="1y", step="year", stepmode="backward"),
+                dict(count=2, label="2y", step="year", stepmode="backward"),
+                dict(count=3, label="3y", step="year", stepmode="backward"),
+                dict(count=4, label="4y", step="year", stepmode="backward"),
+                dict(step="all")
+            ]
+        ),
+
     )
 
-    filtered_burglary = filtered_burglary.sort_values("Year_Month")
-
-    fig=go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=filtered_burglary["Year_Month"],
-            y=filtered_burglary["burglary_count"],
-            mode='lines+markers',
-            name='Burglary Count',
-            line=dict(color='purple',shape='spline')
-        )
-
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=filtered_predictions["Year_Month"],
-            y=filtered_predictions["prediction"],
-            mode='lines+markers',
-            name='Burglary Prediction',
-            line=dict(color='blue',shape='spline')
-        )
-    )
-
-
-
+    fig.update_layout(
+        xaxis_title="Month-Year",
+        yaxis_title="Burglary Count",)
     return fig
 
 def police_allocation_graph(ward_code):
 
 
     filtered_predictions = predictions[predictions["Ward_Code"] == ward_code]
-    filtered_predictions["Year_Month"] = (
-            predictions["Year"].astype(str) + "-" +
-            predictions["Month"].astype(str).str.zfill(2)
-    )
 
     fig = go.Figure()
 
     fig.add_trace(
         go.Bar(
-            x=filtered_predictions["Year_Month"],
+            x=filtered_predictions["Date"],
             y=filtered_predictions["officers"],
             name='Police Allocation',
-            marker_color='blue',
+            marker_color='lightblue',
             text=filtered_predictions["officers"],
             textposition='auto'
         )
+
     )
 
     fig.update_layout(
-        title="Police Allocation",
-        xaxis_title="Year-Month",
+        title={
+            'text': "Police Allocation",
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title="Month-Year",
         yaxis_title="Number of Officers",
-        barmode='group'
+        barmode='group',
+
     )
 
     return fig
