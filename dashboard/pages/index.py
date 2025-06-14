@@ -258,6 +258,21 @@ def redirect_to_ward_from_map(ward_selected):
     ward_code = ward_selected['points'][0]['customdata'][0]
     return f"/ward/{ward_code.lower()}"
 
+@callback(
+    Output('redirect', 'pathname',allow_duplicate=True),
+    Input('socio-map', 'clickData'),
+    prevent_initial_call=True,
+    running=[(Output("socio-map", "disabled"), True, False)]
+)
+def redirect_to_ward_from_map(ward_selected):
+    """
+    Redirects to the ward page when the user clicks on a ward in the socio-economic factors map.
+    """
+    if ward_selected is None:
+        return no_update
+    ward_code = ward_selected['points'][0]['customdata'][0]
+    return f"/ward/{ward_code.lower()}"
+
 
 @callback(Output('map', 'figure'),
           Output('burglary_map_title', 'children'),
@@ -268,6 +283,7 @@ def redirect_to_ward_from_map(ward_selected):
 
 def update_map(feature, selected_year, selected_month):
     """
+    Updates the map based on the selected feature (burglary prediction or police officers allocated)
 
     """
     data_empty, data = load_data(selected_year, selected_month)
@@ -408,3 +424,5 @@ def update_socio_economic_map(socio_factor, selected_year, selected_month):
 
     else:
         return no_update,no_update
+
+

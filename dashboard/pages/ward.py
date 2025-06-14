@@ -20,9 +20,9 @@ graph_config = {
 
 def layout(ward_code=None):
 
-    '''
+    """
     Creates layout for the ward page
-    '''
+    """
 
     if ward_code.upper() in wards["Ward code"].values:
 
