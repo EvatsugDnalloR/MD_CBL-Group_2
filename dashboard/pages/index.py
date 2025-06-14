@@ -157,6 +157,8 @@ def load_map(_,selected_year, selected_month):
             html.Div(id="socio-economic-section")
         ], style={'textAlign': 'center', 'marginTop': '20px'})
         maps_container = html.Div([
+            html.Div([
+            html.H3("Predicted Residential Burglary Count",id="burglary_map_title", style={"textAlign": "center"}),
             dcc.Graph(
                 id="map",
                 figure=fig,
@@ -169,7 +171,7 @@ def load_map(_,selected_year, selected_month):
                     ],
                     "displaylogo": False,
                 },
-            )
+            )], style={"width": "100%"})
         ], id="maps-container", style={"display": "flex", "flexDirection": "row", "gap": "10px"})
 
         return html.Div([
@@ -183,7 +185,7 @@ def load_map(_,selected_year, selected_month):
         ])
 
 
-def create_map(data,boundaries,factor,title="Predicted burglary count"):
+def create_map(data,boundaries,factor,title=None):
 
     """
     Creates a choropleth map of London wards with burglary predictions and police allocation.
@@ -202,7 +204,7 @@ def create_map(data,boundaries,factor,title="Predicted burglary count"):
                                 labels={'Ward_Code': 'Ward code','officers': 'Police Officers allocated',"prediction": 'Burglary Prediction'},
                                 color_continuous_scale="Blues",
                                 map_style="carto-positron", zoom=zoom,range_color=(0, p98),
-                                center=center, opacity=0.7,title=title)
+                                center=center, opacity=0.7,)
 
 
 
@@ -212,11 +214,11 @@ def create_map(data,boundaries,factor,title="Predicted burglary count"):
     fig.update_layout(
 
         coloraxis_colorbar=dict(
-            title=title,
             tickvals=scale,
             ticktext=scale_labels,
             ticks="outside",
-            len=0.9
+            len=0.9,
+            title=title
 
         )
     )
@@ -258,9 +260,11 @@ def redirect_to_ward_from_map(ward_selected):
 
 
 @callback(Output('map', 'figure'),
+          Output('burglary_map_title', 'children'),
           [Input('feature-dropdown', 'value')],
           [State('year-dropdown-index', 'value'),
-           State('month-dropdown-index', 'value')])
+           State('month-dropdown-index', 'value')]
+          , prevent_initial_call=True)
 
 def update_map(feature, selected_year, selected_month):
     """
@@ -272,13 +276,13 @@ def update_map(feature, selected_year, selected_month):
         return no_update
 
     if feature == 1:  # Burglary prediction
-        return create_map(data, london_boundaries,"prediction")
+        return create_map(data, london_boundaries,"prediction"), "Predicted Residential Burglary Count"
 
     elif feature == 2:  # Police officers allocated
-        return create_map(data, london_boundaries, "officers",title="Police Officers Allocated")
+        return create_map(data, london_boundaries, "officers"), "Police Officers Allocated"
 
     else:
-        return no_update
+        return no_update,no_update
 
 
 @callback(
@@ -297,7 +301,7 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
 
 
 
-    main_fig = create_map(data, london_boundaries, "prediction")
+    main_fig = create_map(data, london_boundaries, "prediction",title=None)
 
 
     # If button clicked odd number of times, show both maps
@@ -306,10 +310,12 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
 
         # Return both maps side by side
         maps_content = [
+            html.Div([
+            html.H3("Predicted Burglary Count", id="burglary_map_title",style={"textAlign": "center"}),
             dcc.Graph(
                 id="map",
                 figure=main_fig,
-                style={"width": "50%", "height": "700px"},
+                style={"width": "100%", "height": "700px"},
                 config={
                     "doubleClick": "reset+autosize",
                     "modeBarButtonsToRemove": [
@@ -318,10 +324,12 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
                     ],
                     "displaylogo": False,
                 },
-            ),
+            )],style={"width": "50%"}),
+            html.Div([
+            html.H3(id="socio_economic_title", style={"textAlign": "center"}),
             dcc.Graph(
                 id="socio-map",
-                style={"width": "50%", "height": "700px"},
+                style={"width": "100%", "height": "700px"},
                 config={
                     "doubleClick": "reset+autosize",
                     "modeBarButtonsToRemove": [
@@ -330,7 +338,7 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
                     ],
                     "displaylogo": False,
                 },
-            )
+            )], style={"width": "50%"})
         ]
         button_text = "Hide Socio-Economic Factors"
         socio_economic_options = html.Div([
@@ -343,7 +351,7 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
                     {'label': "Occupancy", 'value': 3}
                 ],
                 value=1,
-                style={'width': "200px",'margin': '0 auto', 'padding': '10px'}
+                style={'width': "40%",'margin': '0 auto' }
             )
         ], style={"textAlign": "center", "marginBottom": "10px"})
     else:
@@ -371,9 +379,9 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
 
 @callback(
     Output('socio-map', 'figure'),
+    Output('socio_economic_title', 'children'),
     Input('socio-economic-dropdown', 'value'),
-    [State('year-dropdown-index', 'value'),
-     State('month-dropdown-index', 'value')],
+    State('year-dropdown-index', 'value'),State('month-dropdown-index', 'value'),
     prevent_initial_call=True
 )
 def update_socio_economic_map(socio_factor, selected_year, selected_month):
@@ -388,15 +396,15 @@ def update_socio_economic_map(socio_factor, selected_year, selected_month):
     if socio_factor == 1:
         filtered_population=population[population["Year"]==2025]
         socio_data = data.merge(filtered_population, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "population_density", title="Population")
+        return create_map(socio_data, london_boundaries, "Population Density"), "Population Density 2025"
 
     elif socio_factor == 2:
         socio_data = data.merge(cars_vans, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "none_pct", title="% households with no cars or vans")
+        return create_map(socio_data, london_boundaries, "%None", title="%")," % Households with no cars or vans 2021"
 
     elif socio_factor == 3:
         socio_data = data.merge(occupancy, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "0_pct", title="%")
+        return create_map(socio_data, london_boundaries, "0_pct", title="%")," % Households with exactly the required number of bedrooms"
 
     else:
-        return no_update
+        return no_update,no_update

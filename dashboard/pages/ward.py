@@ -18,7 +18,6 @@ graph_config = {
 }
 
 
-
 def layout(ward_code=None):
 
     '''
@@ -32,6 +31,14 @@ def layout(ward_code=None):
         ward_name= wards[wards["Ward code"] == ward_code]["Ward name"].values[0]
         return html.Div([
             dcc.Store('ward_code', data=ward_code),
+            html.Div(
+                dcc.Link(
+                    'Go back to main page',
+                    href='/',
+                    style={'display': 'inline-block','padding': '10px 20px','marginTop': '10px','marginBottom': '20px','backgroundColor': '#646665','color': 'white','borderRadius': '5px','fontWeight': 'bold','textDecoration': 'none',}
+                ),
+                style={'textAlign': 'center', 'width': '100%'}
+            ),
             html.H2(f"Ward {ward_name} ({ward_code}) Data", style={"textAlign": "center"}),
 
             html.Div([
@@ -120,25 +127,17 @@ def load_ward_data(_,selected_year, selected_month, ward_code):
     predictions_filtered = predictions[(predictions["Ward_Code"] == ward_code) &(predictions["Year"] == selected_year) & (predictions["Month"] == selected_month)]
     filtered_burglary = burglary[(burglary["Ward code"] == ward_code) & (burglary["Year"] == selected_year) & (burglary["Month"] == selected_month)]
 
-
     data=[]
 
-    if predictions_filtered.empty:
-        data.append(html.H3("No predictions available for the selected year and month.", style={"textAlign": "center"}))
-    else:
-
+    if not predictions_filtered.empty:
         pred_row=predictions_filtered.iloc[0]
         data.append(
             html.Div([
                 html.P(f"Police Allocation: {pred_row['officers']}", style={"textAlign": "center"}),
-                html.P(f"Prediction: {pred_row['prediction']}", style={"textAlign": "center"}),
-                html.P(f"Mean Absolute Error: {pred_row['mae']:.2f}", style={"textAlign": "center"}),
-                html.P(f"Root Mean Squared Error: {pred_row['rmse']:.2f}", style={"textAlign": "center"}),
+                html.P(f"Prediction: {pred_row['prediction']}", style={"textAlign": "center"})
             ])
         )
-    if filtered_burglary.empty:
-        data.append(html.H3("No historical burglary data available for the selected year and month.", style={"textAlign": "center"}))
-    else:
+    if not filtered_burglary.empty:
         data.append(
             html.Div([
                 html.P(f"Burglary Count: {filtered_burglary.iloc[0]['burglary_count']}", style={"textAlign": "center"}),

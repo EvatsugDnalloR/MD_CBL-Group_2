@@ -105,7 +105,7 @@ Note that the dashboard is running on the localhost http://127.0.0.1:8050/.
 *   **Ward Data:**
     *   Displays the name and code of the selected ward.
     *   Allows to filter data by year and month for this specific ward.
-    *   Shows number of police officers allocated, burglary prediction, Mean Absolute Error, Root Mean Squared Error or  historical burglary count for the selected year and month.
+    *   Shows number of police officers allocated and burglary prediction or  historical burglary count for the selected year and month.
 
 *   **Time-Series Graphs:**
     *   **Burglary Prediction Graph:** Shows historical and predicted burglary counts over time for the ward.
