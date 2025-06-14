@@ -3,6 +3,7 @@ from datetime import datetime
 import plotly.express as px
 from dash import dcc, html, no_update, register_page, callback
 from dash.dependencies import Input, Output,State
+
 from dashboard.data import london_boundaries, predictions, wards, population, cars_vans, occupancy
 from numpy import linspace
 
@@ -153,9 +154,12 @@ def load_map(_,selected_year, selected_month):
                     "marginBottom": "15px"
                 }
             ),
-
-            html.Div(id="socio-economic-section")
+            html.Div(id="socio-economic-options") #Container for socio-economic dropdown
         ], style={'textAlign': 'center', 'marginTop': '20px'})
+
+
+
+
         maps_container = html.Div([
             html.Div([
             html.H3("Predicted Residential Burglary Count",id="burglary_map_title", style={"textAlign": "center"}),
@@ -171,7 +175,23 @@ def load_map(_,selected_year, selected_month):
                     ],
                     "displaylogo": False,
                 },
-            )], style={"width": "100%"})
+            )], id="burglary-map-section", style={"width": "100%"}),
+
+            html.Div([
+                html.H3(id="socio_economic_title", style={"textAlign": "center"}),
+                dcc.Graph(
+                    id="socio-map",
+                    style={"width": "100%", "height": "700px","display": "none"},
+                    config={
+                        "doubleClick": "reset+autosize",
+                        "modeBarButtonsToRemove": [
+                            "zoom", "pan", "select",
+                            "autoScale", "resetScale", "lasso2d", "toImage", "resetView",
+                        ],
+                        "displaylogo": False,
+                    },
+                )],id="socio-economic-section", style={"display":"none"})
+
         ], id="maps-container", style={"display": "flex", "flexDirection": "row", "gap": "10px"})
 
         return html.Div([
@@ -302,60 +322,19 @@ def update_map(feature, selected_year, selected_month):
 
 
 @callback(
-    [Output('maps-container', 'children'), Output('toggle-socio-btn', 'children'),Output('socio-economic-section', 'children')],
+    [Output("burglary-map-section", 'style'), Output('toggle-socio-btn', 'children'),
+     Output('socio-economic-section', 'style'), Output('socio-economic-options', 'children')],
     [Input('toggle-socio-btn', 'n_clicks')],
-    [State('year-dropdown-index', 'value'),
-     State('month-dropdown-index', 'value')],
     prevent_initial_call=True,
     running=[(Output("toggle-socio-btn", "disabled"), True, False)]
 )
-def socio_economic_map(n_clicks, selected_year, selected_month):
+def socio_economic_map(n_clicks):
     """
     Toggle the display of socio-economic factors map next to the main map.
     """
-    data_empty, data = load_data(selected_year, selected_month)
-
-
-
-    main_fig = create_map(data, london_boundaries, "prediction",title=None)
-
-
     # If button clicked odd number of times, show both maps
     if n_clicks and n_clicks % 2 == 1:
-        # Create socio-economic data and map
 
-        # Return both maps side by side
-        maps_content = [
-            html.Div([
-            html.H3("Predicted Burglary Count", id="burglary_map_title",style={"textAlign": "center"}),
-            dcc.Graph(
-                id="map",
-                figure=main_fig,
-                style={"width": "100%", "height": "700px"},
-                config={
-                    "doubleClick": "reset+autosize",
-                    "modeBarButtonsToRemove": [
-                        "zoom", "pan", "select",
-                        "autoScale", "resetScale", "lasso2d", "toImage", "resetView",
-                    ],
-                    "displaylogo": False,
-                },
-            )],style={"width": "50%"}),
-            html.Div([
-            html.H3(id="socio_economic_title", style={"textAlign": "center"}),
-            dcc.Graph(
-                id="socio-map",
-                style={"width": "100%", "height": "700px"},
-                config={
-                    "doubleClick": "reset+autosize",
-                    "modeBarButtonsToRemove": [
-                        "zoom", "pan", "select",
-                        "autoScale", "resetScale", "lasso2d", "toImage", "resetView",
-                    ],
-                    "displaylogo": False,
-                },
-            )], style={"width": "50%"})
-        ]
         button_text = "Hide Socio-Economic Factors"
         socio_economic_options = html.Div([
             html.Label("Select socio-economic factor:"),
@@ -366,36 +345,26 @@ def socio_economic_map(n_clicks, selected_year, selected_month):
                     {'label': "Cars or vans", 'value': 2},
                     {'label': "Occupancy", 'value': 3}
                 ],
-                value=1,
+                value=1,  # Default to Population
                 style={'width': "40%",'margin': '0 auto' }
             )
         ], style={"textAlign": "center", "marginBottom": "10px"})
-    else:
-        # Return only the main map
-        maps_content = [
-            dcc.Graph(
-                id="map",
-                figure=main_fig,
-                style={"width": "100%", "height": "700px"},
-                config={
-                    "doubleClick": "reset+autosize",
-                    "modeBarButtonsToRemove": [
-                        "zoom", "pan", "select",
-                        "autoScale", "resetScale", "lasso2d", "toImage", "resetView",
-                    ],
-                    "displaylogo": False,
-                },
-            )
-        ]
-        button_text = "Show Socio-Economic Factors"
-        socio_economic_options=None
 
-    return maps_content, button_text,socio_economic_options
+        socio_economic_section_style = {"display": "block","width":"50%"}
+        burglary_map_section_style = {"width": "50%"}
+    else:
+        button_text = "Show Socio-Economic Factors"
+        socio_economic_section_style= {"display": "none"}
+        burglary_map_section_style = {"width": "100%"}
+        socio_economic_options = None
+
+    return burglary_map_section_style, button_text,socio_economic_section_style,socio_economic_options
 
 
 @callback(
     Output('socio-map', 'figure'),
     Output('socio_economic_title', 'children'),
+    Output('socio-map', 'style'),
     Input('socio-economic-dropdown', 'value'),
     State('year-dropdown-index', 'value'),State('month-dropdown-index', 'value'),
     prevent_initial_call=True
@@ -408,21 +377,19 @@ def update_socio_economic_map(socio_factor, selected_year, selected_month):
 
     if data_empty:
         return no_update
-
+    style_map={"width": "100%", "height": "700px"}
     if socio_factor == 1:
         filtered_population=population[population["Year"]==2025]
         socio_data = data.merge(filtered_population, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "Population Density"), "Population Density 2025"
+        return create_map(socio_data, london_boundaries, "Population Density"), "Population Density 2025",style_map
 
     elif socio_factor == 2:
         socio_data = data.merge(cars_vans, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "%None", title="%")," % Households with no cars or vans 2021"
+        return create_map(socio_data, london_boundaries, "%None", title="%")," % Households with no cars or vans 2021",style_map
 
     elif socio_factor == 3:
         socio_data = data.merge(occupancy, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "0_pct", title="%")," % Households with exactly the required number of bedrooms"
+        return create_map(socio_data, london_boundaries, "0_pct", title="%")," % Households with exactly the required number of bedrooms 2021",style_map
 
     else:
-        return no_update,no_update
-
-
+        return no_update,no_update,no_update
