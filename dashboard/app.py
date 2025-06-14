@@ -5,6 +5,7 @@ app = Dash(__name__, title="London Residential Burglary & Police Allocation Dash
 
 
 
+#Registering the pages
 
 app.layout = html.Div([
     dcc.Location(id='redirect',refresh="callback-nav"),
