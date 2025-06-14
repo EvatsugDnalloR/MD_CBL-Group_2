@@ -5,8 +5,7 @@ app = Dash(__name__, title="London Residential Burglary & Police Allocation Dash
 
 
 
-#Registering the pages
-
+#Defines main layout and registers the dashboard pages
 app.layout = html.Div([
     dcc.Location(id='redirect',refresh="callback-nav"),
     html.H1(
@@ -19,4 +18,4 @@ app.layout = html.Div([
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
