@@ -410,23 +410,23 @@ class SocioEconomicSARIMA:
                     }
 
                     # Calculate comprehensive scores for optimized prediction
-                    ocs, dvr, sp = oscillation_capture_score(row["actual"], adj_pred)
+                    ocs, vr, sp = oscillation_capture_score(row["actual"], adj_pred)
                     self.model_scores[row["ward_code"]] = {
                         "final_mae": adj_mae,
                         "final_rmse": np.sqrt(mean_squared_error(row["actual"], adj_pred)),
                         "ocs_score": ocs,
-                        "dvr_score": dvr,
+                        "vr_score": vr,
                         "sp_score": sp
                     }
                     optimized_count += 1
                 else:
                     # Keep original prediction
-                    ocs, dvr, sp = oscillation_capture_score(row["actual"], row["predicted"])
+                    ocs, vr, sp = oscillation_capture_score(row["actual"], row["predicted"])
                     self.model_scores[row["ward_code"]] = {
                         "final_mae": row["mae"],
                         "final_rmse": np.sqrt(mean_squared_error(row["actual"], row["predicted"])),
                         "ocs_score": ocs,
-                        "dvr_score": dvr,
+                        "vr_score": vr,
                         "sp_score": sp
                     }
 
@@ -525,7 +525,7 @@ class SocioEconomicSARIMA:
                         "mae": scores["final_mae"],
                         "rmse": scores["final_rmse"],
                         "ocs_score": scores["ocs_score"],
-                        "dvr_score": scores["dvr_score"],
+                        "vr_score": scores["vr_score"],
                         "sp_score": scores["sp_score"]
                     })
 

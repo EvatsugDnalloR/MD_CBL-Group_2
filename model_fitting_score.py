@@ -20,8 +20,8 @@ def oscillation_capture_score(actual, predicted):
 
     @note: The Oscillation Capture Score combines two key components:
 
-           B{1. Detrended Variability Ratio (DVR):}
-           DVR = min(Var(predicted) / Var(actual), 2.0)
+           B{1. Variability Ratio (VR):}
+           VR = min(Var(predicted) / Var(actual), 2.0)
 
            This metric captures how much the prediction variates compared to the actual values.
            It effectively penalizes models that produce flat-line predictions (like some ARIMA models)
@@ -41,7 +41,7 @@ def oscillation_capture_score(actual, predicted):
            receive low scores, while predictions matching the actual volatility receive higher scores.
 
            B{3. Final Composite Score:}
-           OCS = 0.5 * DVR + 0.5 * SP
+           OCS = 0.5 * VR + 0.5 * SP
 
            The final score ranges from 0 to 1, where higher values indicate better oscillation
            pattern matching. The equal weighting (0.5 each) balances variance matching with
@@ -57,22 +57,22 @@ def oscillation_capture_score(actual, predicted):
     if n < 3:
         return 0.0  # Not enough data
 
-    # 1. Detrended Variability Ratio (DVR)
+    # 1. Variability Ratio (DVR)
     var_actual = np.var(actual)
     var_pred = np.var(predicted)
 
     # Handle near-zero variance cases
     if var_actual < 1e-10 and var_pred < 1e-10:
-        dvr = 1.0
+        vr = 1.0
     elif var_actual < 1e-10:
-        dvr = 0.0
+        vr = 0.0
     else:
-        dvr = min(var_pred / var_actual, 2.0)  # Cap at 2.0
+        vr = min(var_pred / var_actual, 2.0)  # Cap at 2.0
 
     # 2. Smoothness Penalty (SP)
     pred_diff = np.diff(predicted)
     sp = 1 - np.exp(-np.mean(np.abs(pred_diff)) / max(1, np.mean(np.abs(np.diff(actual)))))
 
     # Combine components
-    ocs = 0.5 * dvr + 0.5 * sp
-    return ocs, dvr, sp
+    ocs = 0.5 * vr + 0.5 * sp
+    return ocs, vr, sp
