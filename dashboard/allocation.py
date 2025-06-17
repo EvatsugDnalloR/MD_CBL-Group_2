@@ -7,6 +7,6 @@ def allocate_police(df: pd.DataFrame) -> pd.DataFrame:
     Allocate police officers based on burglary predictions.
     """
     scaler = MinMaxScaler(feature_range=(14, 100))
-    df['officers'] = np.round(scaler.fit_transform(df[['prediction']])).astype(int)
+    df['officers'] = np.ceil(scaler.fit_transform(df[['prediction']])).astype(int)
 
     return df
