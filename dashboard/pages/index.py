@@ -1,14 +1,21 @@
 
 from datetime import datetime
-import plotly.express as px
-from dash import dcc, html, no_update, register_page, callback
-from dash.dependencies import Input, Output,State
 
-from dashboard.data import london_boundaries, predictions, wards, population, cars_vans, occupancy
+import plotly.express as px
+from dash import callback, dcc, html, no_update, register_page
+from dash.dependencies import Input, Output, State
 from numpy import linspace
 
+from dashboard.data import (
+    cars_vans,
+    london_boundaries,
+    occupancy,
+    population,
+    predictions,
+    wards,
+)
 
-years= sorted(predictions['Year'].unique()) #Get years from the predictions data for the dropdown
+years= sorted(predictions["Year"].unique()) #Get years from the predictions data for the dropdown
 current_year,current_month=datetime.now().year, datetime.now().month
 
 
@@ -20,34 +27,34 @@ layout=html.Div([
     html.Div([
         html.Label("Select Year:"),
         dcc.Dropdown(
-            id='year-dropdown-index',
-            options=[{'label': str(year), 'value': year}
+            id="year-dropdown-index",
+            options=[{"label": str(year), "value": year}
                      for year in years],
             value=current_year  # Default to most recent year
         ),
 
         html.Label("Select Month:"),
         dcc.Dropdown(
-            id='month-dropdown-index',
+            id="month-dropdown-index",
             options=[
-                {'label': 'January', 'value': 1},
-                {'label': 'February', 'value': 2},
-                {'label': 'March', 'value': 3},
-                {'label': 'April', 'value': 4},
-                {'label': 'May', 'value': 5},
-                {'label': 'June', 'value': 6},
-                {'label': 'July', 'value': 7},
-                {'label': 'August', 'value': 8},
-                {'label': 'September', 'value': 9},
-                {'label': 'October', 'value': 10},
-                {'label': 'November', 'value': 11},
-                {'label': 'December', 'value': 12}
+                {"label": "January", "value": 1},
+                {"label": "February", "value": 2},
+                {"label": "March", "value": 3},
+                {"label": "April", "value": 4},
+                {"label": "May", "value": 5},
+                {"label": "June", "value": 6},
+                {"label": "July", "value": 7},
+                {"label": "August", "value": 8},
+                {"label": "September", "value": 9},
+                {"label": "October", "value": 10},
+                {"label": "November", "value": 11},
+                {"label": "December", "value": 12}
 
             ],
             value=current_month  # Default to the current month
 
         ),
-    ], style={'width': '30%', 'margin': '0 auto', 'padding': '10px'}),
+    ], style={"width": "30%", "margin": "0 auto", "padding": "10px"}),
 
     html.Div(
         html.Button(
@@ -64,14 +71,13 @@ layout=html.Div([
                 "cursor": "pointer"
             }
         ),
-        style={'textAlign': 'center', 'marginBottom': '15px'}
+        style={"textAlign": "center", "marginBottom": "15px"}
     ),
 
 
-    html.Div(id='content')  # Container for storing the map and search bar when year and month are selected
+    html.Div(id="content")  # Container for storing the map and search bar when year and month are selected
 
 ])
-
 
 
 def load_data(year,month):
@@ -80,7 +86,7 @@ def load_data(year,month):
     Loads the prediction data for the selected year and month and merges it with the London boundaries based on the ward code.
     If no data is available for the selected year and month, it returns a message indicating that.
     """
-    filtered_predictions = predictions[(predictions['Year'] == year) & (predictions['Month'] == month)]
+    filtered_predictions = predictions[(predictions["Year"] == year) & (predictions["Month"] == month)]
 
     if filtered_predictions.empty:
         return True, "No data available for the selected year and month."
@@ -88,9 +94,8 @@ def load_data(year,month):
     return False,london_boundaries.merge(filtered_predictions, left_on="WD24CD", right_on="Ward_Code", how="left")
 
 
-
-@callback(Output('content', 'children'), [Input('load-data-btn', 'n_clicks')],
-    [State('year-dropdown-index', 'value'), State('month-dropdown-index', 'value')],
+@callback(Output("content", "children"), [Input("load-data-btn", "n_clicks")],
+    [State("year-dropdown-index", "value"), State("month-dropdown-index", "value")],
     prevent_initial_call=True,running=[(Output("load-data-btn", "disabled"), True, False)])
 def load_content(_,selected_year, selected_month):
     """
@@ -107,9 +112,9 @@ def load_content(_,selected_year, selected_month):
             html.Div([
                 html.Label("Search for a ward:"),
                 dcc.Dropdown(
-                    id='ward-search',
-                    options=[{'label': f"{row['Ward name']} ({row['Ward code']})",
-                              'value': row['Ward code']}
+                    id="ward-search",
+                    options=[{"label": f"{row['Ward name']} ({row['Ward code']})",
+                              "value": row["Ward code"]}
                              for _, row in wards.iterrows()],
                     placeholder="Type to search for a ward...",
                     style={"width": "100%"}
@@ -135,16 +140,16 @@ def load_content(_,selected_year, selected_month):
         feature_dropdown = html.Div([
             html.Label("Select feature for map:"),
             dcc.Dropdown(
-                id='feature-dropdown',
+                id="feature-dropdown",
                 options=[
 
-                    { 'label': 'Burglary prediction', 'value': 1},
-                    {'label': 'Police officers allocated', 'value': 2},
+                    { "label": "Burglary prediction", "value": 1},
+                    {"label": "Police officers allocated", "value": 2},
                 ],
                 value=1
 
             ),
-        ], style={'width': '30%', 'margin': '0 auto', 'padding': '10px'})
+        ], style={"width": "30%", "margin": "0 auto", "padding": "10px"})
         # Button to show or hide the socio-economic factors map
         socio_economic_factors = html.Div([
             html.Button(
@@ -163,7 +168,7 @@ def load_content(_,selected_year, selected_month):
                 }
             ),
             html.Div(id="socio-economic-options") #Container for  dropdown with socio-economic factors
-        ], style={'textAlign': 'center', 'marginTop': '20px'})
+        ], style={"textAlign": "center", "marginTop": "20px"})
 
         # Container for the burglary prediction map and the socio-economic factors map
         maps_container = html.Div([
@@ -207,12 +212,13 @@ def load_content(_,selected_year, selected_month):
             maps_container,
         ])
 
+
 def create_map(data,boundaries,factor,title=None):
 
     """
     Creates a choropleth map of London wards with the specified factor for the given data.
     """
-    center = {'lat': 51.5074, 'lon': -0.1278}  # London coordinates
+    center = {"lat": 51.5074, "lon": -0.1278}  # London coordinates
     zoom = 9 # Default zoom level for the map
 
     p98 = data[factor].quantile(0.98) # 98th percentile to eliminate outliers when scaling the color scale
@@ -220,8 +226,8 @@ def create_map(data,boundaries,factor,title=None):
     fig = px.choropleth_map(data, geojson=boundaries, locations="Ward_Code",
                                 featureidkey="properties.WD24CD",
                                 color=factor, hover_name="WD24NM",
-                                hover_data=['Ward_Code', 'prediction', 'officers'],
-                                labels={'Ward_Code': 'Ward code','officers': 'Police Officers allocated',"prediction": 'Burglary Prediction'},
+                                hover_data=["Ward_Code", "prediction", "officers"],
+                                labels={"Ward_Code": "Ward code","officers": "Police Officers allocated","prediction": "Burglary Prediction"},
                                 color_continuous_scale="Blues",
                                 map_style="carto-positron", zoom=zoom,range_color=(0, p98),
                                 center=center, opacity=0.7,)
@@ -245,9 +251,9 @@ def create_map(data,boundaries,factor,title=None):
     return fig
 
 @callback(
-    Output('redirect', 'pathname'),
-    Input('view-ward-btn', 'n_clicks'),
-    State('ward-search', 'value'),
+    Output("redirect", "pathname"),
+    Input("view-ward-btn", "n_clicks"),
+    State("ward-search", "value"),
     prevent_initial_call=True,
     running=[(Output("view-ward-btn", "disabled"), True, False)]
 )
@@ -262,8 +268,8 @@ def redirect_to_ward_page(_, ward_code):
 
 
 @callback(
-    Output('redirect', 'pathname',allow_duplicate=True),
-    Input('map', 'clickData'),
+    Output("redirect", "pathname",allow_duplicate=True),
+    Input("map", "clickData"),
     prevent_initial_call=True,
     running=[(Output("map", "disabled"), True, False)]
 )
@@ -273,12 +279,12 @@ def redirect_to_ward_from_map(ward_selected):
     """
     if ward_selected is None:
         return no_update
-    ward_code = ward_selected['points'][0]['customdata'][0]
+    ward_code = ward_selected["points"][0]["customdata"][0]
     return f"/ward/{ward_code.lower()}"
 
 @callback(
-    Output('redirect', 'pathname',allow_duplicate=True),
-    Input('socio-map', 'clickData'),
+    Output("redirect", "pathname",allow_duplicate=True),
+    Input("socio-map", "clickData"),
     prevent_initial_call=True,
     running=[(Output("socio-map", "disabled"), True, False)]
 )
@@ -288,15 +294,15 @@ def redirect_to_ward_from_map(ward_selected):
     """
     if ward_selected is None:
         return no_update
-    ward_code = ward_selected['points'][0]['customdata'][0]
+    ward_code = ward_selected["points"][0]["customdata"][0]
     return f"/ward/{ward_code.lower()}"
 
 
-@callback(Output('map', 'figure'),
-          Output('burglary_map_title', 'children'),
-          [Input('feature-dropdown', 'value')],
-          [State('year-dropdown-index', 'value'),
-           State('month-dropdown-index', 'value')]
+@callback(Output("map", "figure"),
+          Output("burglary_map_title", "children"),
+          [Input("feature-dropdown", "value")],
+          [State("year-dropdown-index", "value"),
+           State("month-dropdown-index", "value")]
           , prevent_initial_call=True)
 
 def update_map(feature, selected_year, selected_month):
@@ -318,9 +324,9 @@ def update_map(feature, selected_year, selected_month):
         return no_update,no_update
 
 @callback(
-    [Output("burglary-map-section", 'style'), Output('toggle-socio-btn', 'children'),
-     Output('socio-economic-section', 'style'), Output('socio-economic-options', 'children')],
-    [Input('toggle-socio-btn', 'n_clicks')],
+    [Output("burglary-map-section", "style"), Output("toggle-socio-btn", "children"),
+     Output("socio-economic-section", "style"), Output("socio-economic-options", "children")],
+    [Input("toggle-socio-btn", "n_clicks")],
     prevent_initial_call=True,
     running=[(Output("toggle-socio-btn", "disabled"), True, False)]
 )
@@ -335,14 +341,14 @@ def socio_economic_map(n_clicks):
         socio_economic_options = html.Div([
             html.Label("Select socio-economic factor:"),
             dcc.Dropdown(
-                id='socio-economic-dropdown',
+                id="socio-economic-dropdown",
                 options=[
-                    {'label': "Population", 'value': 1},
-                    {'label': "Cars or vans", 'value': 2},
-                    {'label': "Occupancy", 'value': 3}
+                    {"label": "Population", "value": 1},
+                    {"label": "Cars or vans", "value": 2},
+                    {"label": "Occupancy", "value": 3}
                 ],
                 value=1,  # Default to Population
-                style={'width': "40%",'margin': '0 auto' }
+                style={"width": "40%","margin": "0 auto" }
             )
         ], style={"textAlign": "center", "marginBottom": "10px"})
 
@@ -358,11 +364,11 @@ def socio_economic_map(n_clicks):
 
 
 @callback(
-    Output('socio-map', 'figure'),
-    Output('socio_economic_title', 'children'),
-    Output('socio-map', 'style'),
-    Input('socio-economic-dropdown', 'value'),
-    State('year-dropdown-index', 'value'),State('month-dropdown-index', 'value'),
+    Output("socio-map", "figure"),
+    Output("socio_economic_title", "children"),
+    Output("socio-map", "style"),
+    Input("socio-economic-dropdown", "value"),
+    State("year-dropdown-index", "value"),State("month-dropdown-index", "value"),
     prevent_initial_call=True
 )
 def update_socio_economic_map(socio_factor, selected_year, selected_month):
@@ -377,7 +383,7 @@ def update_socio_economic_map(socio_factor, selected_year, selected_month):
     if socio_factor == 1: # Population Density
         filtered_population=population[population["Year"]==2025]
         socio_data = data.merge(filtered_population, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "Population Density"), "Population Density 2025",style_map
+        return create_map(socio_data, london_boundaries, "Population Density"), "Population 2025",style_map
 
     elif socio_factor == 2: # Number of Cars or Vans
         socio_data = data.merge(cars_vans, left_on="Ward_Code", right_on="Ward code", how="left")

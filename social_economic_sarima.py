@@ -2,7 +2,7 @@ import os
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -170,8 +170,8 @@ class SocioEconomicSARIMA:
         print(f"Unique wards in burglary data: {self.burglary_monthly['Ward Code'].nunique()}")
 
         # Check data overlap
-        burglary_wards = set(self.burglary_monthly['Ward Code'].unique())
-        socio_wards = set(self.cluster_df['ward_code'].unique())
+        burglary_wards = set(self.burglary_monthly["Ward Code"].unique())
+        socio_wards = set(self.cluster_df["ward_code"].unique())
         common_wards = burglary_wards.intersection(socio_wards)
 
         if len(common_wards) == 0:
@@ -308,10 +308,10 @@ class SocioEconomicSARIMA:
 
             except Exception as e:
                 failed_wards.append((ward_code, str(e)))
-                print(f"Failed to fit model for ward {ward_code}: {str(e)}")
+                print(f"Failed to fit model for ward {ward_code}: {e!s}")
 
         # Report results
-        print(f"\nModel fitting completed:")
+        print("\nModel fitting completed:")
         print(f"Successfully trained: {successful_fits}/{total_wards} wards")
 
         if failed_wards:
@@ -436,7 +436,7 @@ class SocioEconomicSARIMA:
                 warnings.warn("No wards benefited from socio-economic optimization")
 
         except Exception as e:
-            raise RuntimeError(f"Optimization failed: {str(e)}")
+            raise RuntimeError(f"Optimization failed: {e!s}")
 
     def forecast_ward(self, ward_code: str, forecast_dates: pd.DatetimeIndex) -> pd.Series:
         """
@@ -476,7 +476,7 @@ class SocioEconomicSARIMA:
             return base_pred
 
         except Exception as e:
-            raise RuntimeError(f"Forecasting failed for ward {ward_code}: {str(e)}")
+            raise RuntimeError(f"Forecasting failed for ward {ward_code}: {e!s}")
 
     def forecast_all_wards(self, forecast_start: str, num_forecast_months: int) -> pd.DataFrame:
         """
@@ -536,7 +536,7 @@ class SocioEconomicSARIMA:
 
             self.forecast_results = pd.DataFrame(results)
 
-            print(f"Forecast generation completed:")
+            print("Forecast generation completed:")
             print(f"Successful: {successful_forecasts}/{len(self.models)} wards")
 
             if failed_forecasts:
@@ -547,7 +547,7 @@ class SocioEconomicSARIMA:
             return self.forecast_results
 
         except Exception as e:
-            raise RuntimeError(f"Forecast generation failed: {str(e)}")
+            raise RuntimeError(f"Forecast generation failed: {e!s}")
 
     def save_forecasts(self, output_path: str):
         """
@@ -585,7 +585,7 @@ class SocioEconomicSARIMA:
             print(f"File contains {len(self.forecast_results)} forecast records")
 
         except Exception as e:
-            raise RuntimeError(f"Failed to save forecasts: {str(e)}")
+            raise RuntimeError(f"Failed to save forecasts: {e!s}")
 
     def get_model_summary(self) -> dict[str, str] | dict[
         str, int | dict[Any, Any] | dict[str, floating[Any] | float] | dict[str, int | float | Any] | dict[
@@ -638,7 +638,7 @@ class SocioEconomicSARIMA:
 
             # Data coverage information
             if self.burglary_monthly is not None and self.cluster_df is not None:
-                total_burglary_wards = self.burglary_monthly['Ward Code'].nunique()
+                total_burglary_wards = self.burglary_monthly["Ward Code"].nunique()
                 total_socio_wards = len(self.cluster_df)
 
                 summary["data_coverage"] = {
@@ -650,7 +650,7 @@ class SocioEconomicSARIMA:
             return summary
 
         except Exception as e:
-            warnings.warn(f"Error generating model summary: {str(e)}")
+            warnings.warn(f"Error generating model summary: {e!s}")
             return {"error": str(e)}
 
 
@@ -705,8 +705,8 @@ if __name__ == "__main__":
     print(f"Clusters used: {summary.get('total_clusters', 'N/A')}")
     print(f"Wards with optimization: {summary.get('optimized_wards', 'N/A')}")
 
-    if 'performance_metrics' in summary and summary['performance_metrics']:
-        metrics = summary['performance_metrics']
+    if summary.get("performance_metrics"):
+        metrics = summary["performance_metrics"]
         print(f"Mean MAE: {metrics.get('mean_mae', 'N/A'):.3f}")
         print(f"Mean RMSE: {metrics.get('mean_rmse', 'N/A'):.3f}")
 
