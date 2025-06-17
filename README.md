@@ -56,6 +56,12 @@ This data was downloaded from the [UK police website](https://data.police.uk/dat
 The cleaning object can be found in `clean_data.py`, which outputs the already existing CSV
 file `residential_burglary.csv` that can be found in the `data` folder.
 
+### Socio-Economic Factors Correlation to the Residential Burglary Counts
+The analysis of correlation between socio-economic factors and burglary counts across wards
+can be found in the `social_economic_burglary_correlation` module.
+At the end, two housing-related factors have been chosen: **Percentage of households owning no car** 
+and **Percentage of Households with Occupancy Rating of 0** (no extra bedroom), both on ward level.
+
 ### Performance Comparison between **Naive Forecasting Model** and **Hybrid Forecasting Model**
 The Python scripts and Jupyter Notebooks for performance testing of the models can be found in the `model_performance_testing` module, 
 and all the scripts and notebooks mentioned below are inside this module.
