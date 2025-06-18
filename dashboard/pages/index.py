@@ -378,12 +378,12 @@ def update_socio_economic_map(socio_factor, selected_year, selected_month):
     if data_empty:
         return no_update
     style_map={"width": "100%", "height": "700px"}
-    
+
     if socio_factor == 1: # Number of Cars or Vans
         socio_data = data.merge(cars_vans, left_on="Ward_Code", right_on="Ward code", how="left")
         return create_map(socio_data, london_boundaries, "%None", title="%")," % Households with no cars or vans 2021",style_map
 
-    elif socio_factor == 3: # Occupancy
+    elif socio_factor == 2: # Occupancy
         socio_data = data.merge(occupancy, left_on="Ward_Code", right_on="Ward code", how="left")
         return create_map(socio_data, london_boundaries, "0_pct", title="%")," % Households with exactly the required number of bedrooms 2021",style_map
 
