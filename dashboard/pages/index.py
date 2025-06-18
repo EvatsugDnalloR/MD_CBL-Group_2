@@ -10,7 +10,6 @@ from dashboard.data import (
     cars_vans,
     london_boundaries,
     occupancy,
-    population,
     predictions,
     wards,
 )
@@ -343,11 +342,10 @@ def socio_economic_map(n_clicks):
             dcc.Dropdown(
                 id="socio-economic-dropdown",
                 options=[
-                    {"label": "Population", "value": 1},
-                    {"label": "Cars or vans", "value": 2},
-                    {"label": "Occupancy", "value": 3}
+                    {"label": "Cars or vans", "value": 1},
+                    {"label": "Occupancy", "value": 2}
                 ],
-                value=1,  # Default to Population
+                value=1,  # Default to Cars or vans
                 style={"width": "40%","margin": "0 auto" }
             )
         ], style={"textAlign": "center", "marginBottom": "10px"})
@@ -380,12 +378,8 @@ def update_socio_economic_map(socio_factor, selected_year, selected_month):
     if data_empty:
         return no_update
     style_map={"width": "100%", "height": "700px"}
-    if socio_factor == 1: # Population Density
-        filtered_population=population[population["Year"]==2025]
-        socio_data = data.merge(filtered_population, left_on="Ward_Code", right_on="Ward code", how="left")
-        return create_map(socio_data, london_boundaries, "Population Density"), "Population 2025",style_map
-
-    elif socio_factor == 2: # Number of Cars or Vans
+    
+    if socio_factor == 1: # Number of Cars or Vans
         socio_data = data.merge(cars_vans, left_on="Ward_Code", right_on="Ward code", how="left")
         return create_map(socio_data, london_boundaries, "%None", title="%")," % Households with no cars or vans 2021",style_map
 

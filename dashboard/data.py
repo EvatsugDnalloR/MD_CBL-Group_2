@@ -21,6 +21,5 @@ predictions["Date"] = pd.to_datetime({
 })
 
 # Load socioeconomic factors data
-population = pd.read_csv("static/population.csv")
 occupancy = pd.read_csv("static/occupancy_rating_bedrooms_wards.csv")
 cars_vans = pd.read_csv("static/cars_or_vans_wards.csv")
