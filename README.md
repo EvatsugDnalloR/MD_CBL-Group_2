@@ -87,7 +87,7 @@ Run the main forecasting pipeline `social_economic_sarima.py`, which will:
 
 ### Dashboard
 All the dashboard-related files are in the `dashboard` module. 
-To run the dashboard, run `app.py` in this module. 
+To run the dashboard, run `python -m dashboard.app` in the root folder of the project. 
 Note that the dashboard is running on the localhost http://127.0.0.1:8050/.
 
 ### Main Page Functionalities
